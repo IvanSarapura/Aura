@@ -6,7 +6,7 @@ Boilerplate de DApp listo para usar, construido con las herramientas más utiliz
 
 | Herramienta | Rol |
 |---|---|
-| [Next.js 14+](https://nextjs.org/) (App Router) | Framework frontend |
+| [Next.js 16](https://nextjs.org/) (App Router) | Framework frontend |
 | [Wagmi v2](https://wagmi.sh/) | Hooks para interactuar con la blockchain |
 | [viem v2](https://viem.sh/) | Librería de bajo nivel para Ethereum (reemplaza a ethers.js) |
 | [RainbowKit](https://www.rainbowkit.com/) | UI de conexión de wallets |
@@ -17,15 +17,20 @@ Boilerplate de DApp listo para usar, construido con las herramientas más utiliz
 ```
 src/
 ├── app/
-│   ├── layout.tsx        # Root layout (proveedores, fuentes, metadata)
-│   ├── page.tsx          # Home page de ejemplo
-│   └── globals.css       # Estilos globales
+│   ├── layout.tsx          # Root layout (proveedores, fuentes, metadata)
+│   ├── page.tsx            # Home page de ejemplo
+│   ├── error.tsx           # Error boundary global
+│   ├── not-found.tsx       # Página 404
+│   ├── loading.tsx         # Loading state global
+│   └── globals.css         # Estilos globales
 ├── components/
-│   └── WalletInfo.tsx    # Ejemplo de uso de hooks de Wagmi
+│   └── WalletInfo.tsx      # Ejemplo de uso de hooks de Wagmi
 ├── config/
-│   └── wagmi.ts          # Configuración de Wagmi + RainbowKit
+│   ├── env.ts              # Validación de variables de entorno
+│   └── wagmi.ts            # Configuración de Wagmi + RainbowKit
 └── providers/
-    └── Web3Provider.tsx  # Composición de proveedores Web3
+    ├── ClientWeb3Provider.tsx  # Wrapper dinámico (ssr: false)
+    └── Web3Provider.tsx        # Composición de proveedores Web3
 ```
 
 ## Setup
