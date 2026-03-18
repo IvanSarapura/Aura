@@ -62,6 +62,20 @@ npm run dev
 
 Abrí [http://localhost:3000](http://localhost:3000) en el navegador.
 
+## Scripts disponibles
+
+| Comando                 | Descripción                     |
+| ----------------------- | ------------------------------- |
+| `npm run dev`           | Servidor de desarrollo          |
+| `npm run build`         | Build de producción             |
+| `npm run start`         | Servidor de producción          |
+| `npm run lint`          | Linter (ESLint)                 |
+| `npm run format`        | Formatear código (Prettier)     |
+| `npm run format:check`  | Verificar formato sin modificar |
+| `npm test`              | Ejecutar tests (Vitest)         |
+| `npm run test:watch`    | Tests en modo watch             |
+| `npm run test:coverage` | Tests con reporte de cobertura  |
+
 ## Agregar redes
 
 Editá `src/config/wagmi.ts` y agregá las redes que necesites desde `wagmi/chains`:
