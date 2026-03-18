@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Web3 Boilerplate
 
-## Getting Started
+Boilerplate de DApp listo para usar, construido con las herramientas más utilizadas en el ecosistema Web3.
 
-First, run the development server:
+## Stack
+
+| Herramienta | Rol |
+|---|---|
+| [Next.js 14+](https://nextjs.org/) (App Router) | Framework frontend |
+| [Wagmi v2](https://wagmi.sh/) | Hooks para interactuar con la blockchain |
+| [viem v2](https://viem.sh/) | Librería de bajo nivel para Ethereum (reemplaza a ethers.js) |
+| [RainbowKit](https://www.rainbowkit.com/) | UI de conexión de wallets |
+| [TanStack Query](https://tanstack.com/query) | Cache y estado asíncrono (requerido por Wagmi) |
+
+## Estructura del proyecto
+
+```
+src/
+├── app/
+│   ├── layout.tsx        # Root layout (proveedores, fuentes, metadata)
+│   ├── page.tsx          # Home page de ejemplo
+│   └── globals.css       # Estilos globales
+├── components/
+│   └── WalletInfo.tsx    # Ejemplo de uso de hooks de Wagmi
+├── config/
+│   └── wagmi.ts          # Configuración de Wagmi + RainbowKit
+└── providers/
+    └── Web3Provider.tsx  # Composición de proveedores Web3
+```
+
+## Setup
+
+### 1. Instalar dependencias
+
+```bash
+npm install
+```
+
+### 2. Configurar variables de entorno
+
+```bash
+cp .env.local.example .env.local
+```
+
+Completá el archivo `.env.local` con tu **WalletConnect Project ID**.
+Podés obtener uno gratis en [cloud.walletconnect.com](https://cloud.walletconnect.com).
+
+### 3. Correr el servidor de desarrollo
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrí [http://localhost:3000](http://localhost:3000) en el navegador.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Agregar redes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Editá `src/config/wagmi.ts` y agregá las redes que necesites desde `wagmi/chains`:
 
-## Learn More
+```ts
+import { mainnet, sepolia, polygon, arbitrum, base } from 'wagmi/chains';
 
-To learn more about Next.js, take a look at the following resources:
+chains: [mainnet, sepolia, polygon],
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Leer datos de la blockchain
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Usá los hooks de Wagmi dentro de componentes `'use client'`:
 
-## Deploy on Vercel
+```tsx
+'use client';
+import { useAccount, useBalance, useReadContract } from 'wagmi';
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Recursos
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Documentación de Wagmi](https://wagmi.sh/react/getting-started)
+- [Documentación de RainbowKit](https://www.rainbowkit.com/docs/introduction)
+- [viem docs](https://viem.sh/docs/getting-started)
