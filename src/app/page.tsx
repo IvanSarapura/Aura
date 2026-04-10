@@ -1,6 +1,7 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { WalletInfo } from '@/components/WalletInfo';
 import { TokenInfo } from '@/components/TokenInfo';
+import { TransferForm } from '@/components/TransferForm';
 import styles from './page.module.css';
 
 export default function Home() {
@@ -17,6 +18,7 @@ export default function Home() {
       <section className={styles.section}>
         <WalletInfo />
         <TokenInfo />
+        <TransferForm />
       </section>
     </main>
   );
