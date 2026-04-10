@@ -1,6 +1,7 @@
 import { render, screen, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { TokenInfo } from './TokenInfo';
+import { getSupportedChainNames } from '@/config/chains';
 
 vi.mock('wagmi', () => ({
   useAccount: vi.fn(),
@@ -41,10 +42,11 @@ describe('TokenInfo', () => {
 
     render(<TokenInfo />);
 
-    expect(
-      screen.getByText(/cambiá a una de estas redes/i),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/ethereum sepolia/i)).toBeInTheDocument();
+    const hint = screen.getByText(/cambiá a una de estas redes/i);
+    expect(hint).toBeInTheDocument();
+    // El texto de redes soportadas debe venir de la fuente de verdad del boilerplate.
+    // Si el proyecto agrega nuevas redes (p. ej. Optimism), este test debe adaptarse.
+    expect(hint).toHaveTextContent(getSupportedChainNames());
   });
 
   it.each([
