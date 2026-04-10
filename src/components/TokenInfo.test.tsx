@@ -44,7 +44,7 @@ describe('TokenInfo', () => {
     expect(
       screen.getByText(/cambiá a una de estas redes/i),
     ).toBeInTheDocument();
-    expect(screen.getByText(/sepolia/i)).toBeInTheDocument();
+    expect(screen.getByText(/ethereum sepolia/i)).toBeInTheDocument();
   });
 
   it.each([
