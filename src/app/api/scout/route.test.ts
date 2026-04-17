@@ -1,4 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { TipEvent } from '@/lib/tipEvents';
+
+vi.mock('@/lib/fetchTips', () => ({
+  fetchTips: vi.fn().mockResolvedValue([]),
+}));
 
 const mockCreate = vi.fn().mockResolvedValue({
   content: [
@@ -8,18 +13,11 @@ const mockCreate = vi.fn().mockResolvedValue({
         trustLevel: 'High',
         headline: 'Active contributor',
         tags: ['Veteran'],
-        stats: {
-          txCount: 100,
-          usdmVolume: '50.00',
-          lastActive: '',
-          walletAge: '',
-        },
       }),
     },
   ],
 });
 
-// The route uses `new Anthropic()` — mock must be a real constructor (class)
 vi.mock('@anthropic-ai/sdk', () => ({
   default: class MockAnthropic {
     messages = { create: mockCreate };
@@ -27,6 +25,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
 }));
 
 import { GET } from './route';
+import { fetchTips } from '@/lib/fetchTips';
 
 const VALID_ADDRESS = '0x1234567890123456789012345678901234567890';
 
@@ -35,13 +34,27 @@ const EMPTY_BLOCKSCOUT = {
   json: () => Promise.resolve({ items: [] }),
 };
 
+function makeTipEvent(overrides?: Partial<TipEvent>): TipEvent {
+  return {
+    from: '0xaaaa000000000000000000000000000000000001' as `0x${string}`,
+    to: VALID_ADDRESS as `0x${string}`,
+    token: '0x0000000000000000000000000000000000000002' as `0x${string}`,
+    tokenSymbol: 'mUSDm',
+    amount: '5.00',
+    category: 'design',
+    message: 'great work',
+    timestamp: '2024-01-01T00:00:00Z',
+    txHash: '0xhash',
+    ...overrides,
+  };
+}
+
 describe('GET /api/scout', () => {
   const originalApiKey = process.env.ANTHROPIC_API_KEY;
 
   beforeEach(() => {
-    // Ensure no API key → fallback mode
     delete process.env.ANTHROPIC_API_KEY;
-
+    vi.mocked(fetchTips).mockResolvedValue([]);
     global.fetch = vi
       .fn()
       .mockResolvedValue(EMPTY_BLOCKSCOUT) as unknown as typeof fetch;
@@ -125,5 +138,150 @@ describe('GET /api/scout', () => {
     await GET(req);
 
     expect(mockCreate).toHaveBeenCalled();
+  });
+
+  // ── AuraStats ────────────────────────────────────────────────────────────────
+
+  it('fallback response includes auraStats field', async () => {
+    const req = new Request(
+      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
+    );
+    const res = await GET(req);
+    const body = await res.json();
+    expect(body).toHaveProperty('auraStats');
+  });
+
+  it('auraStats has expected shape when tips are empty', async () => {
+    const req = new Request(
+      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
+    );
+    const res = await GET(req);
+    const { auraStats } = await res.json();
+    expect(auraStats).toMatchObject({
+      tipsReceived: 0,
+      tipsSent: 0,
+      uniqueTippers: 0,
+      topCategories: [],
+      totalVolumeReceived: '0.00',
+    });
+  });
+
+  it('trust upgrades to Medium when wallet has 3+ received tips', async () => {
+    vi.mocked(fetchTips).mockImplementation(async (_addr, type) =>
+      type === 'received'
+        ? [makeTipEvent(), makeTipEvent(), makeTipEvent()]
+        : [],
+    );
+
+    const req = new Request(
+      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
+    );
+    const res = await GET(req);
+    const body = await res.json();
+    expect(body.trustLevel).toBe('Medium');
+  });
+
+  it('trust upgrades to High when wallet has 10+ tips with 3+ unique tippers', async () => {
+    const tippers = [
+      '0xaaaa000000000000000000000000000000000001',
+      '0xbbbb000000000000000000000000000000000002',
+      '0xcccc000000000000000000000000000000000003',
+    ] as const;
+    const received = Array.from({ length: 10 }, (_, i) =>
+      makeTipEvent({ from: tippers[i % 3] as `0x${string}` }),
+    );
+    vi.mocked(fetchTips).mockImplementation(async (_addr, type) =>
+      type === 'received' ? received : [],
+    );
+
+    const req = new Request(
+      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
+    );
+    const res = await GET(req);
+    const body = await res.json();
+    expect(body.trustLevel).toBe('High');
+  });
+
+  it('includes Tipper tag when tipsReceived > 0', async () => {
+    vi.mocked(fetchTips).mockImplementation(async (_addr, type) =>
+      type === 'received' ? [makeTipEvent()] : [],
+    );
+
+    const req = new Request(
+      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
+    );
+    const res = await GET(req);
+    const body = await res.json();
+    expect(body.tags).toContain('Tipper');
+  });
+
+  it('does not include Tipper tag when no tips received', async () => {
+    const req = new Request(
+      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
+    );
+    const res = await GET(req);
+    const body = await res.json();
+    expect(body.tags).not.toContain('Tipper');
+  });
+
+  it('includes Generous tag when tipsSent >= 5', async () => {
+    vi.mocked(fetchTips).mockImplementation(async (_addr, type) =>
+      type === 'sent'
+        ? Array.from({ length: 5 }, () =>
+            makeTipEvent({ to: VALID_ADDRESS as `0x${string}` }),
+          )
+        : [],
+    );
+
+    const req = new Request(
+      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
+    );
+    const res = await GET(req);
+    const body = await res.json();
+    expect(body.tags).toContain('Generous');
+  });
+
+  it('Claude path preserves server-computed auraStats', async () => {
+    process.env.ANTHROPIC_API_KEY = 'test-key';
+    vi.mocked(fetchTips).mockImplementation(async (_addr, type) =>
+      type === 'received' ? [makeTipEvent(), makeTipEvent()] : [],
+    );
+
+    const req = new Request(
+      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
+    );
+    const res = await GET(req);
+    const body = await res.json();
+    expect(body.auraStats).not.toBeNull();
+    expect(body.auraStats.tipsReceived).toBe(2);
+  });
+
+  it('topCategories sorted by frequency', async () => {
+    vi.mocked(fetchTips).mockImplementation(async (_addr, type) =>
+      type === 'received'
+        ? [
+            makeTipEvent({ category: 'code' }),
+            makeTipEvent({ category: 'code' }),
+            makeTipEvent({ category: 'design' }),
+          ]
+        : [],
+    );
+
+    const req = new Request(
+      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
+    );
+    const res = await GET(req);
+    const body = await res.json();
+    expect(body.auraStats.topCategories[0]).toBe('code');
+  });
+
+  it('walletAge and lastActive are null when no transactions', async () => {
+    const req = new Request(
+      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
+    );
+    const res = await GET(req);
+    const { stats } = await res.json();
+    expect(stats.lastActive).toBeNull();
+    expect(stats.walletAge).toBeNull();
   });
 });

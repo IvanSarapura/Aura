@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import type { ScoutResult, TrustLevel } from '@/hooks/useScout';
+import type { ScoutResult, TrustLevel, AuraStats } from '@/hooks/useScout';
+import { fetchTips } from '@/lib/fetchTips';
 
 const CELO_MAINNET_ID = 42220;
 const CELO_SEPOLIA_ID = 11142220;
@@ -10,27 +11,33 @@ const CELO_SEPOLIA_ID = 11142220;
 interface BlockscoutStats {
   txCount: number;
   usdmVolume: string; // formatted USDm transferred
-  lastActive: string; // ISO date string
-  walletAge: string; // ISO date string of first tx
+  lastActive: string | null; // ISO date string, null if no transactions
+  walletAge: string | null; // ISO date string of first tx, null if no transactions
 }
 
 async function fetchBlockscoutStats(address: string): Promise<BlockscoutStats> {
   const base = 'https://celo-sepolia.blockscout.com/api/v2';
+  const usdmAddress = process.env.NEXT_PUBLIC_USDM_ADDRESS_TESTNET ?? '';
 
-  const [txsRes, transfersRes] = await Promise.all([
+  const [txsRes, transfersRes, addrRes] = await Promise.all([
     fetch(`${base}/addresses/${address}/transactions?limit=50`),
-    fetch(`${base}/addresses/${address}/token-transfers?token=USDm&limit=50`),
+    usdmAddress
+      ? fetch(
+          `${base}/addresses/${address}/token-transfers?token=${usdmAddress}&limit=50`,
+        )
+      : Promise.resolve(null),
+    fetch(`${base}/addresses/${address}`),
   ]);
 
   const txData = txsRes.ok ? await txsRes.json() : { items: [] };
-  const transferData = transfersRes.ok
-    ? await transfersRes.json()
-    : { items: [] };
+  const transferData =
+    transfersRes && transfersRes.ok ? await transfersRes.json() : { items: [] };
+  const addrData = addrRes.ok ? await addrRes.json() : {};
 
-  const txCount = txData.items?.length ?? 0;
-  const lastActive = txData.items?.[0]?.timestamp ?? new Date().toISOString();
-  const walletAge =
-    txData.items?.[txCount - 1]?.timestamp ?? new Date().toISOString();
+  const txCount = addrData.tx_count ?? txData.items?.length ?? 0;
+  const items: { timestamp?: string }[] = txData.items ?? [];
+  const lastActive = items[0]?.timestamp ?? null;
+  const walletAge = items[items.length - 1]?.timestamp ?? null;
 
   const totalUsdm = (transferData.items ?? []).reduce(
     (acc: bigint, t: { total?: { value?: string } }) =>
@@ -51,10 +58,10 @@ async function fetchCeloscanStats(address: string): Promise<BlockscoutStats> {
 
   const [txsRes, transfersRes] = await Promise.all([
     fetch(
-      `${base}?module=account&action=txlist&address=${address}&sort=desc&apikey=${apiKey}`,
+      `${base}?module=account&action=txlist&address=${address}&sort=desc&offset=10000&page=1&apikey=${apiKey}`,
     ),
     fetch(
-      `${base}?module=account&action=tokentx&address=${address}&sort=desc&apikey=${apiKey}`,
+      `${base}?module=account&action=tokentx&address=${address}&sort=desc&offset=10000&page=1&apikey=${apiKey}`,
     ),
   ]);
 
@@ -70,10 +77,10 @@ async function fetchCeloscanStats(address: string): Promise<BlockscoutStats> {
   const txCount = txs.length;
   const lastActive = txs[0]?.timeStamp
     ? new Date(Number(txs[0].timeStamp) * 1000).toISOString()
-    : new Date().toISOString();
+    : null;
   const walletAge = txs[txs.length - 1]?.timeStamp
     ? new Date(Number(txs[txs.length - 1].timeStamp) * 1000).toISOString()
-    : new Date().toISOString();
+    : null;
 
   const usdmTransfers = transfers.filter(
     (t: { tokenSymbol?: string }) => t.tokenSymbol === 'cUSD',
@@ -118,44 +125,100 @@ async function detectIsBuilder(
   }
 }
 
+// ── Aura-native activity stats ────────────────────────────────────────────────
+
+async function fetchAuraStats(address: string): Promise<AuraStats> {
+  const [received, sent] = await Promise.all([
+    fetchTips(address, 'received'),
+    fetchTips(address, 'sent'),
+  ]);
+
+  const uniqueTippers = new Set(received.map((t) => t.from.toLowerCase())).size;
+
+  const categoryCounts = received.reduce<Record<string, number>>((acc, t) => {
+    if (t.category) acc[t.category] = (acc[t.category] ?? 0) + 1;
+    return acc;
+  }, {});
+  const topCategories = Object.entries(categoryCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([cat]) => cat);
+
+  const totalVolumeReceived = received
+    .reduce((acc, t) => acc + parseFloat(t.amount), 0)
+    .toFixed(2);
+
+  return {
+    tipsReceived: received.length,
+    tipsSent: sent.length,
+    uniqueTippers,
+    topCategories,
+    totalVolumeReceived,
+  };
+}
+
 // ── Trust level heuristic (fallback when no AI key) ──────────────────────────
 
-function deriveTrustLevel(stats: BlockscoutStats): TrustLevel {
-  const ageMs = Date.now() - new Date(stats.walletAge).getTime();
+function deriveTrustLevel(
+  stats: BlockscoutStats,
+  auraStats: AuraStats | null,
+): TrustLevel {
+  const ageMs = stats.walletAge
+    ? Date.now() - new Date(stats.walletAge).getTime()
+    : 0;
   const ageDays = ageMs / (1000 * 60 * 60 * 24);
   const volume = parseFloat(stats.usdmVolume);
 
+  // High: strong generic history OR proven Aura reputation
   if (stats.txCount >= 50 && ageDays >= 180 && volume >= 100) return 'High';
+  if (auraStats && auraStats.tipsReceived >= 10 && auraStats.uniqueTippers >= 3)
+    return 'High';
+
+  // Medium: moderate generic activity OR early Aura activity OR builder
   if (stats.txCount >= 10 && ageDays >= 30) return 'Medium';
+  if (auraStats && auraStats.tipsReceived >= 3) return 'Medium';
+
   return 'Low';
 }
 
 function buildFallbackResult(
-  address: string,
   stats: BlockscoutStats,
   isBuilder: boolean,
+  auraStats: AuraStats | null,
 ): ScoutResult {
-  const trustLevel = deriveTrustLevel(stats);
+  const trustLevel = deriveTrustLevel(stats, auraStats);
+
+  const auraActive = auraStats && auraStats.tipsReceived > 0;
   const headlines: Record<TrustLevel, string> = {
-    High: 'Active contributor with strong on-chain history',
-    Medium: 'Growing wallet with moderate activity',
-    Low: 'New or low-activity wallet',
+    High: auraActive
+      ? 'Trusted community member with proven tipping history'
+      : 'Active contributor with strong on-chain history',
+    Medium: auraActive
+      ? 'Growing Aura contributor with active tipping'
+      : 'Growing wallet with moderate activity',
+    Low: 'New or low-activity wallet — start tipping to build reputation',
   };
+
   const tags: string[] = [
     trustLevel === 'High'
       ? 'Veteran'
       : trustLevel === 'Medium'
         ? 'Active'
         : 'Newcomer',
-    parseFloat(stats.usdmVolume) > 0 ? 'USDm User' : 'No transfers',
   ];
+
+  if (parseFloat(stats.usdmVolume) > 0) tags.push('USDm User');
+  if (auraActive) tags.push('Tipper');
   if (isBuilder) tags.push('Builder');
+  if (auraStats && auraStats.tipsSent >= 5) tags.push('Generous');
+
   return {
     trustLevel,
     headline: headlines[trustLevel],
     tags,
     isBuilder,
     stats,
+    auraStats,
   };
 }
 
@@ -165,8 +228,18 @@ async function analyzeWithClaude(
   address: string,
   stats: BlockscoutStats,
   isBuilder: boolean,
+  auraStats: AuraStats | null,
 ): Promise<ScoutResult> {
   const client = new Anthropic();
+
+  const auraSection = auraStats
+    ? `Aura platform activity:
+- Tips received: ${auraStats.tipsReceived}
+- Tips sent: ${auraStats.tipsSent}
+- Unique tippers: ${auraStats.uniqueTippers}
+- Total volume received: $${auraStats.totalVolumeReceived}
+- Top categories: ${auraStats.topCategories.join(', ') || 'none'}`
+    : 'Aura platform activity: unavailable';
 
   const prompt = `You are Aura Scout, a Web3 reputation analyst for the Celo blockchain.
 
@@ -174,24 +247,25 @@ Analyze this wallet and return a JSON object with EXACTLY this shape:
 {
   "trustLevel": "Low" | "Medium" | "High",
   "headline": "<one sentence, max 80 chars>",
-  "tags": ["<tag1>", "<tag2>", "<tag3>"],
-  "stats": <echo back the stats object unchanged>
+  "tags": ["<tag1>", "<tag2>", "<tag3>"]
 }
 
 Wallet: ${address}
-Stats:
+On-chain stats:
 - Transactions: ${stats.txCount}
 - USDm volume: $${stats.usdmVolume}
-- Last active: ${stats.lastActive}
-- Wallet age: ${stats.walletAge}
+- Last active: ${stats.lastActive ?? 'unknown'}
+- Wallet age: ${stats.walletAge ?? 'unknown'}
 - Is smart contract deployer: ${isBuilder}
+${auraSection}
 
 Rules:
-- trustLevel High: txCount ≥ 50, wallet age ≥ 180 days, volume ≥ $100
-- trustLevel Medium: txCount ≥ 10, wallet age ≥ 30 days
+- trustLevel High: txCount ≥ 50, wallet age ≥ 180 days, volume ≥ $100 OR tipsReceived ≥ 10
+- trustLevel Medium: txCount ≥ 10, wallet age ≥ 30 days OR tipsReceived ≥ 3
 - trustLevel Low: everything else
 - If isBuilder is true, always include "Builder" in tags
-- tags should reflect activity patterns (e.g. "Veteran", "DeFi User", "Early Adopter", "Regular Tipper", "Builder")
+- If tipsReceived > 0, include "Tipper" in tags
+- tags should reflect activity (e.g. "Veteran", "DeFi User", "Early Adopter", "Regular Tipper", "Builder")
 - headline must be encouraging and factual
 
 Return ONLY valid JSON. No markdown, no explanation.`;
@@ -205,9 +279,11 @@ Return ONLY valid JSON. No markdown, no explanation.`;
   const raw = (
     message.content[0] as { type: string; text: string }
   ).text.trim();
-  const parsed = JSON.parse(raw) as ScoutResult;
-  // Always echo back server-fetched stats and isBuilder to prevent hallucination
-  return { ...parsed, stats, isBuilder };
+  const parsed = JSON.parse(raw) as Omit<
+    ScoutResult,
+    'stats' | 'isBuilder' | 'auraStats'
+  >;
+  return { ...parsed, stats, isBuilder, auraStats };
 }
 
 // ── Route handler ─────────────────────────────────────────────────────────────
@@ -227,17 +303,18 @@ export async function GET(request: Request) {
         : CELO_SEPOLIA_ID,
     );
 
-    const [stats, isBuilder] = await Promise.all([
+    const [stats, isBuilder, auraStats] = await Promise.all([
       chainId === CELO_MAINNET_ID
         ? fetchCeloscanStats(address)
         : fetchBlockscoutStats(address),
       detectIsBuilder(address, chainId),
+      fetchAuraStats(address).catch(() => null),
     ]);
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     const result = apiKey
-      ? await analyzeWithClaude(address, stats, isBuilder)
-      : buildFallbackResult(address, stats, isBuilder);
+      ? await analyzeWithClaude(address, stats, isBuilder, auraStats)
+      : buildFallbackResult(stats, isBuilder, auraStats);
 
     return NextResponse.json(result);
   } catch (err) {

@@ -27,7 +27,8 @@ const STAT_ICONS = {
   walletAge: '⏳',
 };
 
-function formatDate(iso: string): string {
+function formatDate(iso: string | null): string {
+  if (!iso) return '—';
   try {
     return new Date(iso).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -40,7 +41,8 @@ function formatDate(iso: string): string {
 }
 
 export function ImpactCard({ result, address }: Props) {
-  const { trustLevel, headline, tags, isBuilder, stats } = result;
+  const { trustLevel, headline, tags, isBuilder, stats, auraStats } = result;
+  const hasAuraActivity = auraStats && auraStats.tipsReceived > 0;
 
   return (
     <article
@@ -93,7 +95,7 @@ export function ImpactCard({ result, address }: Props) {
         ))}
       </ul>
 
-      {/* Stats */}
+      {/* On-chain stats */}
       <dl className={styles.stats}>
         <div className={styles.stat}>
           <dt className={styles.statLabel}>
@@ -132,6 +134,57 @@ export function ImpactCard({ result, address }: Props) {
           <dd>{formatDate(stats.walletAge)}</dd>
         </div>
       </dl>
+
+      {/* Aura Activity */}
+      <section
+        className={styles.auraSection}
+        aria-label="Aura platform activity"
+      >
+        <h3 className={styles.auraSectionTitle}>✦ Aura Activity</h3>
+        {auraStats ? (
+          <>
+            <dl className={styles.auraStats}>
+              <div className={styles.stat}>
+                <dt className={styles.statLabel}>Tips Received</dt>
+                <dd
+                  className={hasAuraActivity ? styles.auraHighlight : undefined}
+                >
+                  {auraStats.tipsReceived}
+                </dd>
+              </div>
+              <div className={styles.stat}>
+                <dt className={styles.statLabel}>Tips Sent</dt>
+                <dd>{auraStats.tipsSent}</dd>
+              </div>
+              <div className={styles.stat}>
+                <dt className={styles.statLabel}>Unique Tippers</dt>
+                <dd>{auraStats.uniqueTippers}</dd>
+              </div>
+              <div className={styles.stat}>
+                <dt className={styles.statLabel}>Vol. Received</dt>
+                <dd>${auraStats.totalVolumeReceived}</dd>
+              </div>
+            </dl>
+            {auraStats.topCategories.length > 0 && (
+              <div className={styles.categories}>
+                <span className={styles.categoriesLabel}>Top categories</span>
+                <ul
+                  className={styles.categoryList}
+                  aria-label="Top tip categories"
+                >
+                  {auraStats.topCategories.map((cat) => (
+                    <li key={cat} className={styles.category}>
+                      {cat}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
+        ) : (
+          <p className={styles.auraEmpty}>No Aura activity yet</p>
+        )}
+      </section>
     </article>
   );
 }

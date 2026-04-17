@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { ImpactCard } from './ImpactCard';
-import type { ScoutResult } from '@/hooks/useScout';
+import type { ScoutResult, AuraStats } from '@/hooks/useScout';
 
 const ADDRESS = '0xABCDEF1234567890ABCDEF1234567890ABCDEF12';
 
@@ -16,6 +16,15 @@ const BASE_RESULT: ScoutResult = {
     lastActive: '2024-01-15T10:00:00Z',
     walletAge: '2022-03-01T00:00:00Z',
   },
+  auraStats: null,
+};
+
+const AURA_STATS: AuraStats = {
+  tipsReceived: 5,
+  tipsSent: 2,
+  uniqueTippers: 3,
+  topCategories: ['design', 'code'],
+  totalVolumeReceived: '25.00',
 };
 
 describe('ImpactCard', () => {
@@ -64,5 +73,79 @@ describe('ImpactCard', () => {
       />,
     );
     expect(screen.getByText('Low Trust')).toBeInTheDocument();
+  });
+
+  // ── Aura Activity section ────────────────────────────────────────────────────
+
+  it('renders Aura Activity section title', () => {
+    render(<ImpactCard result={BASE_RESULT} address={ADDRESS} />);
+    expect(screen.getByText('✦ Aura Activity')).toBeInTheDocument();
+  });
+
+  it('renders "No Aura activity yet" when auraStats is null', () => {
+    render(<ImpactCard result={BASE_RESULT} address={ADDRESS} />);
+    expect(screen.getByText('No Aura activity yet')).toBeInTheDocument();
+  });
+
+  it('renders tip counts when auraStats is provided', () => {
+    render(
+      <ImpactCard
+        result={{ ...BASE_RESULT, auraStats: AURA_STATS }}
+        address={ADDRESS}
+      />,
+    );
+    // tipsReceived=5, tipsSent=2, uniqueTippers=3
+    expect(screen.getByText('5')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('$25.00')).toBeInTheDocument();
+  });
+
+  it('does not render "No Aura activity yet" when auraStats is provided', () => {
+    render(
+      <ImpactCard
+        result={{ ...BASE_RESULT, auraStats: AURA_STATS }}
+        address={ADDRESS}
+      />,
+    );
+    expect(screen.queryByText('No Aura activity yet')).not.toBeInTheDocument();
+  });
+
+  it('renders top categories when present', () => {
+    render(
+      <ImpactCard
+        result={{ ...BASE_RESULT, auraStats: AURA_STATS }}
+        address={ADDRESS}
+      />,
+    );
+    expect(screen.getByText('design')).toBeInTheDocument();
+    expect(screen.getByText('code')).toBeInTheDocument();
+  });
+
+  it('does not render categories section when topCategories is empty', () => {
+    render(
+      <ImpactCard
+        result={{
+          ...BASE_RESULT,
+          auraStats: { ...AURA_STATS, topCategories: [] },
+        }}
+        address={ADDRESS}
+      />,
+    );
+    expect(screen.queryByText('Top categories')).not.toBeInTheDocument();
+  });
+
+  it('renders — for null lastActive and walletAge', () => {
+    render(
+      <ImpactCard
+        result={{
+          ...BASE_RESULT,
+          stats: { ...BASE_RESULT.stats, lastActive: null, walletAge: null },
+        }}
+        address={ADDRESS}
+      />,
+    );
+    const dashes = screen.getAllByText('—');
+    expect(dashes.length).toBeGreaterThanOrEqual(2);
   });
 });
