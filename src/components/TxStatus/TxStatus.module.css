@@ -5,25 +5,28 @@
   padding: 0.75rem 1rem;
   border-radius: var(--radius-md);
   font-size: 0.875rem;
-  border: 1.5px solid transparent;
+  border: 1px solid transparent;
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base);
 }
 
 .approving,
 .tipping {
-  background: color-mix(in srgb, var(--color-celo-gold) 10%, transparent);
-  border-color: color-mix(in srgb, var(--color-celo-gold) 25%, transparent);
+  background: color-mix(in srgb, var(--color-celo-gold) 8%, transparent);
+  border-color: color-mix(in srgb, var(--color-celo-gold) 20%, transparent);
   color: var(--color-celo-gold);
 }
 
 .success {
-  background: color-mix(in srgb, var(--color-celo-green) 10%, transparent);
-  border-color: color-mix(in srgb, var(--color-celo-green) 25%, transparent);
+  background: color-mix(in srgb, var(--color-celo-green) 8%, transparent);
+  border-color: color-mix(in srgb, var(--color-celo-green) 22%, transparent);
   color: var(--color-celo-green);
 }
 
 .error {
-  background: color-mix(in srgb, var(--color-error) 10%, transparent);
-  border-color: color-mix(in srgb, var(--color-error) 25%, transparent);
+  background: color-mix(in srgb, var(--color-error) 8%, transparent);
+  border-color: color-mix(in srgb, var(--color-error) 20%, transparent);
   color: var(--color-error);
 }
 
@@ -32,17 +35,16 @@
   display: inline-block;
   width: 0.875rem;
   height: 0.875rem;
-  border: 2px solid currentColor;
+  border: 1.5px solid currentColor;
   border-top-color: transparent;
   border-radius: 50%;
-  animation: spin 0.6s linear infinite;
+  animation: spin 0.65s linear infinite;
 }
 
 .checkmark {
   font-size: 1rem;
   font-weight: 700;
 }
-
 .errorIcon {
   font-size: 0.875rem;
   font-weight: 700;
@@ -54,11 +56,14 @@
   font-weight: 600;
   color: inherit;
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
+  opacity: 0.8;
+  transition: opacity var(--transition-fast);
 }
 
 .link:hover {
-  opacity: 0.8;
+  opacity: 1;
+  text-decoration: underline;
 }
 
 @keyframes spin {

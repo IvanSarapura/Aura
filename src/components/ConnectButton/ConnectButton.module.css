@@ -4,23 +4,33 @@
 
 .connectBtn {
   padding: 0.625rem 1.25rem;
-  background: var(--color-celo-green);
+  background: linear-gradient(135deg, var(--color-celo-green), #2bc970);
   color: #000;
   border: none;
   border-radius: var(--radius-md);
   font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  box-shadow: 0 4px 12px
+    color-mix(in srgb, var(--color-celo-green) 25%, transparent);
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .connectBtn:hover {
-  opacity: 0.88;
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.connectBtn:active {
+  transform: scale(0.99);
 }
 
 .wrong {
   background: var(--color-error);
   color: #fff;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-error) 25%, transparent);
 }
 
 .accountRow {
@@ -35,19 +45,23 @@
   align-items: center;
   gap: 0.375rem;
   padding: 0.5rem 0.875rem;
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-2) 80%, transparent);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-text-primary);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  backdrop-filter: blur(8px);
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
 }
 
 .chainBtn:hover,
 .accountBtn:hover {
-  border-color: var(--color-celo-green);
+  border-color: color-mix(in srgb, var(--color-celo-green) 40%, transparent);
+  background: color-mix(in srgb, var(--color-surface-2) 95%, transparent);
 }
 
 .chainIcon {

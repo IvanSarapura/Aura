@@ -11,13 +11,14 @@
 }
 
 .addressTitle {
-  font-size: 1.75rem;
+  font-size: 1.875rem;
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
   background: linear-gradient(
     135deg,
-    var(--color-celo-green),
-    var(--color-celo-gold)
+    var(--color-celo-green) 20%,
+    var(--color-celo-gold) 100%
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -25,11 +26,12 @@
 }
 
 .addressFull {
-  font-family: 'Geist Mono', monospace;
-  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
   color: var(--color-text-muted);
   word-break: break-all;
-  margin-top: 0.25rem;
+  margin-top: 0.375rem;
+  letter-spacing: 0.02em;
 }
 
 .content {
@@ -55,22 +57,24 @@
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--color-border);
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .tipHeading {
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 700;
-  color: var(--color-text-primary, #f0f0fa);
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
 }
 
 .connectPrompt {
   text-align: center;
-  padding: 1.25rem;
+  padding: 1.5rem;
   color: var(--color-text-muted);
   font-size: 0.9375rem;
-  background: var(--color-surface);
-  border: 1.5px dashed var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+  border: 1px dashed var(--color-border);
   border-radius: var(--radius-md);
+  line-height: 1.6;
 }

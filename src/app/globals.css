@@ -1,29 +1,59 @@
 /* ─── Aura Design Tokens ─────────────────────────────────────────────────── */
 :root {
-  --color-bg: #0d0d12;
-  --color-surface: #15151f;
-  --color-surface-2: #1e1e2e;
-  --color-border: #2a2a3d;
+  /* Core palette */
+  --color-bg: #09090f;
+  --color-surface: #111118;
+  --color-surface-2: #1a1a26;
+  --color-border: #252535;
+  --color-border-subtle: #1e1e2c;
+
+  /* Brand */
   --color-celo-green: #35d07f;
   --color-celo-gold: #fbcc5c;
-  --color-text: #e8e8f0;
-  --color-text-muted: #8888a8;
   --color-error: #ff4d6d;
+
+  /* Text */
+  --color-text: #e8e8f0;
+  --color-text-primary: #f0f0fa;
+  --color-text-secondary: #b8b8d0;
+  --color-text-muted: #72728a;
+
+  /* Semantic */
+  --color-success: #35d07f;
+  --color-warning: #fbcc5c;
+
+  /* Glow */
+  --glow-green: color-mix(in srgb, var(--color-celo-green) 22%, transparent);
+  --glow-gold: color-mix(in srgb, var(--color-celo-gold) 18%, transparent);
+  --glow-error: color-mix(in srgb, var(--color-error) 18%, transparent);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md:
+    0 2px 8px rgba(0, 0, 0, 0.3), 0 4px 20px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-lg:
+    0 4px 16px rgba(0, 0, 0, 0.4), 0 8px 40px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-card: var(--shadow-md);
+
+  /* Radii */
   --radius-sm: 6px;
   --radius-md: 12px;
   --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* Transitions */
+  --transition-fast: 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Typography */
   --font-mono: var(--font-geist-mono), 'Courier New', monospace;
   --font-sans: var(--font-geist-sans), Arial, sans-serif;
-  --max-width: 430px;
 
-  /* Semantic aliases */
-  --color-text-primary: #f0f0fa;
-  --color-text-secondary: #c0c0d8;
-  --color-surface-2: #1e1e2e;
-  --color-success: #35d07f;
-  --color-warning: #fbcc5c;
-  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.3);
-  --transition-fast: 0.15s ease;
+  /* Layout */
+  --max-width: 430px;
 }
 
 /* ─── Reset ──────────────────────────────────────────────────────────────── */
@@ -35,7 +65,12 @@
   margin: 0;
 }
 
-html,
+html {
+  height: 100%;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
 body {
   height: 100%;
   overflow-x: hidden;
@@ -44,20 +79,51 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-image: radial-gradient(
+    ellipse 80% 40% at 50% -10%,
+    color-mix(in srgb, var(--color-celo-green) 6%, transparent),
+    transparent
+  );
 }
 
+/* ─── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 999px;
+}
+
+/* ─── Typography ─────────────────────────────────────────────────────────── */
 a {
   color: var(--color-celo-green);
   text-decoration: none;
+  transition: opacity var(--transition-fast);
 }
-
 a:hover {
-  text-decoration: underline;
+  opacity: 0.8;
+  text-decoration: none;
 }
 
 button {
   cursor: pointer;
   font-family: var(--font-sans);
+}
+
+/* ─── Gradient text utility ──────────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(
+    135deg,
+    var(--color-celo-green),
+    var(--color-celo-gold)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* ─── RainbowKit override — match Aura surface ───────────────────────────── */

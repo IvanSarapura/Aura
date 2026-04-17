@@ -70,7 +70,9 @@ export function useAuraTip({
     abi: auraTipAbi,
     functionName: 'tip',
     args: [recipient, amountWei, tokenAddress, category, message],
-    query: { enabled: ready && phase === 'idle' },
+    // Only pre-simulate tip when allowance is already sufficient; otherwise the
+    // simulation will always revert with "insufficient allowance" and burn RPC calls.
+    query: { enabled: ready && phase === 'idle' && !needsApproval },
   });
 
   const publicClient = usePublicClient();
@@ -85,8 +87,9 @@ export function useAuraTip({
   });
 
   // ── 4. Phase transitions ─────────────────────────────────────────────────
-  // After approval confirms, re-simulate tip with fresh on-chain state
-  // (allowance is now set, so the simulation will succeed this time).
+  // After approval confirms, poll on-chain allowance before simulating tip.
+  // RPC nodes on testnets can lag 1-2 blocks behind the confirmed tx, causing
+  // the tip simulation to still see insufficient allowance — hence the retry loop.
   useEffect(() => {
     if (!approveConfirmed || phase !== 'approving') return;
     if (!contracts || !address || !publicClient) {
@@ -95,17 +98,43 @@ export function useAuraTip({
       return;
     }
     setPhase('tipping');
-    publicClient
-      .simulateContract({
-        address: contracts.auraTip,
-        abi: auraTipAbi,
-        functionName: 'tip',
-        args: [recipient, amountWei, tokenAddress, category, message],
-        account: address,
-      })
-      .then(({ request }) => writeContractAsync(request))
-      .then(setTipTxHash)
-      .catch(handleError);
+
+    const waitForAllowanceThenTip = async () => {
+      const MAX_POLLS = 8;
+      const POLL_INTERVAL_MS = 1500;
+
+      for (let i = 0; i < MAX_POLLS; i++) {
+        const onChainAllowance = await publicClient.readContract({
+          address: tokenAddress,
+          abi: erc20Abi,
+          functionName: 'allowance',
+          args: [address, contracts.auraTip],
+        });
+        if (onChainAllowance >= amountWei) break;
+        if (i === MAX_POLLS - 1) {
+          setErrorMsg('Approval not yet visible on-chain. Please try again.');
+          setPhase('error');
+          return;
+        }
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+      }
+
+      try {
+        const { request } = await publicClient.simulateContract({
+          address: contracts.auraTip,
+          abi: auraTipAbi,
+          functionName: 'tip',
+          args: [recipient, amountWei, tokenAddress, category, message],
+          account: address,
+        });
+        const hash = await writeContractAsync(request);
+        setTipTxHash(hash);
+      } catch (err) {
+        handleError(err);
+      }
+    };
+
+    waitForAllowanceThenTip();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [approveConfirmed]);
 

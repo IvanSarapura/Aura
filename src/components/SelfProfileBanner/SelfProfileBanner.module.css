@@ -4,11 +4,12 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.875rem 1rem;
-  background: color-mix(in srgb, var(--color-celo-green) 8%, transparent);
-  border: 1.5px solid
-    color-mix(in srgb, var(--color-celo-green) 25%, transparent);
+  background: color-mix(in srgb, var(--color-celo-green) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-celo-green) 22%, transparent);
   border-radius: var(--radius-md);
   width: 100%;
+  box-shadow: 0 0 16px
+    color-mix(in srgb, var(--color-celo-green) 6%, transparent);
 }
 
 .label {
@@ -42,35 +43,40 @@
   font-weight: 600;
   border: none;
   cursor: pointer;
-  transition: opacity 0.15s ease;
   min-height: 2rem;
   white-space: nowrap;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .btn:hover {
   opacity: 0.82;
+  transform: translateY(-1px);
+}
+.btn:active {
+  transform: scale(0.98);
 }
 
 .btnCopy {
-  background: color-mix(in srgb, var(--color-celo-green) 18%, transparent);
+  background: color-mix(in srgb, var(--color-celo-green) 15%, transparent);
   color: var(--color-celo-green);
-  border: 1px solid color-mix(in srgb, var(--color-celo-green) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-celo-green) 28%, transparent);
 }
 
 .btnCopied {
-  background: color-mix(in srgb, var(--color-celo-green) 25%, transparent);
+  background: color-mix(in srgb, var(--color-celo-green) 22%, transparent);
   color: var(--color-celo-green);
-  border: 1px solid color-mix(in srgb, var(--color-celo-green) 40%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-celo-green) 38%, transparent);
 }
 
 .btnFarcaster {
-  background: color-mix(in srgb, #8a63d2 18%, transparent);
-  color: #b899f7;
-  border: 1px solid color-mix(in srgb, #8a63d2 30%, transparent);
+  background: color-mix(in srgb, #8a63d2 15%, transparent);
+  color: #c4a0ff;
+  border: 1px solid color-mix(in srgb, #8a63d2 28%, transparent);
   text-decoration: none;
 }
 
 .btnFarcaster:hover {
   text-decoration: none;
-  opacity: 0.82;
 }

@@ -5,23 +5,26 @@
 }
 
 .receipt {
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 1.25rem;
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, white 6%, transparent);
+  border-radius: var(--radius-lg);
+  padding: 1.375rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.875rem;
+  box-shadow: var(--shadow-md);
 }
 
 .brand {
   font-size: 1.25rem;
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
   background: linear-gradient(
     135deg,
-    var(--color-celo-green),
-    var(--color-celo-gold)
+    var(--color-celo-green) 20%,
+    var(--color-celo-gold) 100%
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -31,7 +34,7 @@
 
 .divider {
   border: none;
-  border-top: 1px dashed var(--color-border);
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .stats {
@@ -66,7 +69,6 @@
 .amount {
   color: var(--color-celo-green) !important;
 }
-
 .trustHigh {
   color: var(--color-celo-green) !important;
 }
@@ -82,10 +84,10 @@
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   text-decoration: none;
+  transition: opacity var(--transition-fast);
 }
-
 .link:hover {
-  text-decoration: underline;
+  opacity: 0.75;
 }
 
 .footer {
@@ -93,6 +95,7 @@
   color: var(--color-text-muted);
   font-family: var(--font-mono);
   text-align: center;
+  letter-spacing: 0.02em;
 }
 
 .actions {
@@ -104,48 +107,59 @@
 .shareBtn {
   display: block;
   text-align: center;
-  padding: 0.75rem 1rem;
+  padding: 0.8125rem 1rem;
   border-radius: var(--radius-md);
   font-size: 0.9375rem;
   font-weight: 600;
   text-decoration: none;
-  transition: opacity 0.15s ease;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+  letter-spacing: -0.01em;
 }
 
 .shareBtn:hover {
-  opacity: 0.85;
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.shareBtn:active {
+  transform: scale(0.99);
 }
 
 .farcaster {
   background: #7c65c1;
   color: #fff;
+  box-shadow: 0 4px 14px rgba(124, 101, 193, 0.3);
 }
 
 .twitter {
-  background: #000;
-  border: 1.5px solid var(--color-border);
+  background: #0f0f0f;
+  border: 1px solid var(--color-border);
   color: #fff;
 }
 
 .addCash {
-  background: var(--color-celo-green);
+  background: linear-gradient(135deg, var(--color-celo-green), #2bc970);
   color: #000;
+  box-shadow: 0 4px 14px var(--glow-green);
 }
 
 .resetBtn {
   background: transparent;
-  border: 1.5px solid var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-text-muted);
   font-size: 0.875rem;
-  padding: 0.625rem 1rem;
+  padding: 0.75rem 1rem;
   cursor: pointer;
   transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+  width: 100%;
 }
 
 .resetBtn:hover {
-  border-color: var(--color-celo-green);
-  color: var(--color-celo-green);
+  border-color: var(--color-text-muted);
+  color: var(--color-text-secondary);
 }

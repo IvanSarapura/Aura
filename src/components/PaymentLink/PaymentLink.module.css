@@ -5,11 +5,11 @@
 }
 
 .label {
-  font-size: 0.8125rem;
-  font-weight: 500;
+  font-size: 0.6875rem;
+  font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
 }
 
 .row {
@@ -19,66 +19,71 @@
 
 .urlInput {
   flex: 1;
-  min-width: 0; /* prevent flex overflow */
+  min-width: 0;
   padding: 0.625rem 0.875rem;
-  min-height: 3rem; /* 48px touch target */
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
+  min-height: 3rem;
+  background: color-mix(in srgb, var(--color-surface-2) 80%, transparent);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: var(--color-text-secondary, #c0c0d8);
+  color: var(--color-text-secondary);
   font-size: 0.8125rem;
-  font-family: 'Geist Mono', monospace;
+  font-family: var(--font-mono);
   outline: none;
   cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: border-color var(--transition-fast);
 }
 
 .urlInput:focus {
-  border-color: var(--color-celo-green);
+  border-color: color-mix(in srgb, var(--color-celo-green) 40%, transparent);
 }
 
 .copyBtn {
   padding: 0 1rem;
-  min-height: 3rem; /* 48px touch target */
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
+  min-height: 3rem;
+  background: color-mix(in srgb, var(--color-surface-2) 80%, transparent);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: var(--color-text-primary, #f0f0fa);
+  color: var(--color-text-primary);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition:
-    border-color var(--transition-fast, 0.15s ease),
-    color var(--transition-fast, 0.15s ease);
   white-space: nowrap;
   flex-shrink: 0;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    background var(--transition-fast);
 }
 
 .copyBtn:hover {
-  border-color: var(--color-celo-green);
+  border-color: color-mix(in srgb, var(--color-celo-green) 40%, transparent);
   color: var(--color-celo-green);
 }
 
 .copied {
-  border-color: var(--color-celo-green);
+  border-color: color-mix(in srgb, var(--color-celo-green) 40%, transparent);
   color: var(--color-celo-green);
+  background: color-mix(in srgb, var(--color-celo-green) 6%, transparent);
 }
 
 .qrWrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1rem;
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
+  gap: 0.625rem;
+  padding: 1.25rem;
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+  backdrop-filter: blur(8px);
 }
 
 .qrCaption {
   font-size: 0.75rem;
   color: var(--color-text-muted);
   font-family: var(--font-mono);
+  letter-spacing: 0.02em;
 }

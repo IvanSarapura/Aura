@@ -12,9 +12,10 @@
 }
 
 .label {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--color-text-secondary);
+  letter-spacing: 0.01em;
 }
 
 .optional {
@@ -33,15 +34,16 @@
 .textarea {
   width: 100%;
   padding: 0.75rem 1rem;
-  min-height: 3rem; /* 48px touch target */
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
+  min-height: 3rem;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: var(--color-text-primary, #f0f0fa);
+  color: var(--color-text-primary);
   font-size: 0.9375rem;
   transition:
-    border-color var(--transition-fast, 0.15s ease),
-    box-shadow var(--transition-fast, 0.15s ease);
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast);
   outline: none;
   -webkit-appearance: none;
   appearance: none;
@@ -51,8 +53,13 @@
 .select:focus,
 .textarea:focus {
   border-color: var(--color-celo-green);
+  background: color-mix(
+    in srgb,
+    var(--color-surface-2) 90%,
+    var(--color-celo-green) 2%
+  );
   box-shadow: 0 0 0 3px
-    color-mix(in srgb, var(--color-celo-green) 20%, transparent);
+    color-mix(in srgb, var(--color-celo-green) 16%, transparent);
 }
 
 .inputError {
@@ -61,7 +68,7 @@
 
 .inputError:focus {
   border-color: var(--color-error);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error) 16%, transparent);
 }
 
 .unit {
@@ -71,12 +78,14 @@
   font-weight: 600;
   color: var(--color-text-muted);
   pointer-events: none;
+  font-family: var(--font-mono);
 }
 
 .textarea {
   resize: vertical;
   min-height: 5rem;
   font-family: inherit;
+  line-height: 1.5;
 }
 
 .charCount {
@@ -88,17 +97,19 @@
 .hint {
   font-size: 0.8125rem;
   color: var(--color-celo-gold);
-  padding: 0.5rem 0.75rem;
-  background: color-mix(in srgb, var(--color-celo-gold) 10%, transparent);
+  padding: 0.625rem 0.875rem;
+  background: color-mix(in srgb, var(--color-celo-gold) 8%, transparent);
   border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--color-celo-gold) 25%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-celo-gold) 20%, transparent);
+  line-height: 1.5;
 }
 
 .errorMsg {
   font-size: 0.875rem;
   color: var(--color-error);
-  padding: 0.5rem 0.75rem;
-  background: color-mix(in srgb, var(--color-error) 10%, transparent);
+  padding: 0.625rem 0.875rem;
+  background: color-mix(in srgb, var(--color-error) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-error) 16%, transparent);
   border-radius: var(--radius-md);
 }
 
@@ -113,39 +124,48 @@
   justify-content: center;
   gap: 0.5rem;
   padding: 0;
-  height: 3.5rem; /* 56px — prominent CTA */
-  background: var(--color-celo-green);
+  height: 3.5rem;
+  background: linear-gradient(135deg, var(--color-celo-green) 0%, #2bc970 100%);
   color: #000;
   border: none;
   border-radius: var(--radius-md);
   font-size: 1rem;
   font-weight: 700;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  transition:
-    opacity var(--transition-fast, 0.15s ease),
-    transform 0.1s ease;
   width: 100%;
+  box-shadow: 0 4px 16px
+    color-mix(in srgb, var(--color-celo-green) 28%, transparent);
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .button:hover:not(:disabled) {
-  opacity: 0.88;
+  opacity: 0.92;
   transform: translateY(-1px);
+  box-shadow: 0 6px 24px
+    color-mix(in srgb, var(--color-celo-green) 36%, transparent);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+  box-shadow: 0 2px 8px
+    color-mix(in srgb, var(--color-celo-green) 20%, transparent);
 }
 
 .button:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
-}
-
-.success {
-  background: var(--color-celo-green);
+  box-shadow: none;
 }
 
 .spinner {
   display: inline-block;
   width: 1rem;
   height: 1rem;
-  border: 2px solid rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(0, 0, 0, 0.2);
   border-top-color: #000;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
