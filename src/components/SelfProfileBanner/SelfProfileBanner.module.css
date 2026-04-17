@@ -1,0 +1,76 @@
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: color-mix(in srgb, var(--color-celo-green) 8%, transparent);
+  border: 1.5px solid
+    color-mix(in srgb, var(--color-celo-green) 25%, transparent);
+  border-radius: var(--radius-md);
+  width: 100%;
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-celo-green);
+}
+
+.icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  min-height: 2rem;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  opacity: 0.82;
+}
+
+.btnCopy {
+  background: color-mix(in srgb, var(--color-celo-green) 18%, transparent);
+  color: var(--color-celo-green);
+  border: 1px solid color-mix(in srgb, var(--color-celo-green) 30%, transparent);
+}
+
+.btnCopied {
+  background: color-mix(in srgb, var(--color-celo-green) 25%, transparent);
+  color: var(--color-celo-green);
+  border: 1px solid color-mix(in srgb, var(--color-celo-green) 40%, transparent);
+}
+
+.btnFarcaster {
+  background: color-mix(in srgb, #8a63d2 18%, transparent);
+  color: #b899f7;
+  border: 1px solid color-mix(in srgb, #8a63d2 30%, transparent);
+  text-decoration: none;
+}
+
+.btnFarcaster:hover {
+  text-decoration: none;
+  opacity: 0.82;
+}

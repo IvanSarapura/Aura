@@ -32,7 +32,16 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 2rem 1rem;
+  padding: 1.5rem 1rem env(safe-area-inset-bottom, 2rem);
+}
+
+@media (max-width: 375px) {
+  .topbar {
+    padding: 0.875rem 1rem;
+  }
+  .body {
+    padding: 1rem 0.75rem env(safe-area-inset-bottom, 1.5rem);
+  }
 }
 
 /* Error state */

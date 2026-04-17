@@ -9,6 +9,7 @@ export interface ScoutResult {
   trustLevel: TrustLevel;
   headline: string;
   tags: string[];
+  isBuilder: boolean;
   stats: {
     txCount: number;
     usdmVolume: string;

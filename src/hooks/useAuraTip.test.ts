@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('wagmi', () => ({
   useAccount: vi.fn(),
+  usePublicClient: vi.fn(),
   useReadContract: vi.fn(),
   useSimulateContract: vi.fn(),
   useWriteContract: vi.fn(),
@@ -11,6 +12,7 @@ vi.mock('wagmi', () => ({
 
 import {
   useAccount,
+  usePublicClient,
   useReadContract,
   useSimulateContract,
   useWriteContract,
@@ -26,6 +28,7 @@ const MOCK_RECIPIENT = '0x2222222222222222222222222222222222222222' as const;
 const DEFAULT_PARAMS = {
   recipient: MOCK_RECIPIENT,
   amountWei: 1_000_000_000_000_000_000n,
+  tokenAddress: MOCK_ADDRESS,
   category: 'thanks',
   message: '',
 };
@@ -58,6 +61,10 @@ function setupConnectedMocks({
         error: null,
       }) as unknown as ReturnType<typeof useSimulateContract>,
   );
+
+  vi.mocked(usePublicClient).mockReturnValue({
+    simulateContract: vi.fn().mockResolvedValue({ request: TIP_REQUEST }),
+  } as unknown as ReturnType<typeof usePublicClient>);
 
   vi.mocked(useWriteContract).mockReturnValue({
     writeContractAsync,

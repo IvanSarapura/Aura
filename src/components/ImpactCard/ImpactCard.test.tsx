@@ -9,6 +9,7 @@ const BASE_RESULT: ScoutResult = {
   trustLevel: 'High',
   headline: 'Active contributor with strong on-chain history',
   tags: ['Veteran', 'DeFi User'],
+  isBuilder: false,
   stats: {
     txCount: 150,
     usdmVolume: '500.00',

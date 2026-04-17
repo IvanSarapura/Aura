@@ -14,6 +14,19 @@ const TRUST_LABELS: Record<TrustLevel, string> = {
   High: 'High Trust',
 };
 
+const METER_CLASS: Record<TrustLevel, string> = {
+  Low: styles.meterFillLow,
+  Medium: styles.meterFillMedium,
+  High: styles.meterFillHigh,
+};
+
+const STAT_ICONS = {
+  txCount: '🔗',
+  usdmVolume: '💸',
+  lastActive: '📅',
+  walletAge: '⏳',
+};
+
 function formatDate(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString('en-US', {
@@ -27,24 +40,51 @@ function formatDate(iso: string): string {
 }
 
 export function ImpactCard({ result, address }: Props) {
-  const { trustLevel, headline, tags, stats } = result;
+  const { trustLevel, headline, tags, isBuilder, stats } = result;
 
   return (
     <article
       className={`${styles.card} ${styles[`trust${trustLevel}`]}`}
       aria-label="Wallet impact card"
     >
+      {/* Header: badges */}
       <header className={styles.header}>
-        <span className={`${styles.badge} ${styles[`badge${trustLevel}`]}`}>
-          {TRUST_LABELS[trustLevel]}
-        </span>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            flexWrap: 'wrap',
+          }}
+        >
+          <span className={`${styles.badge} ${styles[`badge${trustLevel}`]}`}>
+            {TRUST_LABELS[trustLevel]}
+          </span>
+          {isBuilder && (
+            <span
+              className={styles.builderBadge}
+              aria-label="Contract deployer"
+            >
+              ⬡ Builder
+            </span>
+          )}
+        </div>
         <p className={styles.address}>
           {address.slice(0, 6)}…{address.slice(-4)}
         </p>
       </header>
 
+      {/* Trust meter */}
+      <div className={styles.meterWrapper} aria-hidden="true">
+        <div className={styles.meterTrack}>
+          <div className={`${styles.meterFill} ${METER_CLASS[trustLevel]}`} />
+        </div>
+      </div>
+
+      {/* Headline */}
       <p className={styles.headline}>{headline}</p>
 
+      {/* Tags */}
       <ul className={styles.tags} aria-label="Wallet tags">
         {tags.map((tag) => (
           <li key={tag} className={styles.tag}>
@@ -53,21 +93,42 @@ export function ImpactCard({ result, address }: Props) {
         ))}
       </ul>
 
+      {/* Stats */}
       <dl className={styles.stats}>
         <div className={styles.stat}>
-          <dt>Transactions</dt>
+          <dt className={styles.statLabel}>
+            <span className={styles.statIcon} aria-hidden>
+              {STAT_ICONS.txCount}
+            </span>
+            Transactions
+          </dt>
           <dd>{stats.txCount.toLocaleString()}</dd>
         </div>
         <div className={styles.stat}>
-          <dt>USDm Volume</dt>
+          <dt className={styles.statLabel}>
+            <span className={styles.statIcon} aria-hidden>
+              {STAT_ICONS.usdmVolume}
+            </span>
+            Volume
+          </dt>
           <dd>${stats.usdmVolume}</dd>
         </div>
         <div className={styles.stat}>
-          <dt>Last Active</dt>
+          <dt className={styles.statLabel}>
+            <span className={styles.statIcon} aria-hidden>
+              {STAT_ICONS.lastActive}
+            </span>
+            Last Active
+          </dt>
           <dd>{formatDate(stats.lastActive)}</dd>
         </div>
         <div className={styles.stat}>
-          <dt>Wallet Age</dt>
+          <dt className={styles.statLabel}>
+            <span className={styles.statIcon} aria-hidden>
+              {STAT_ICONS.walletAge}
+            </span>
+            Wallet Age
+          </dt>
           <dd>{formatDate(stats.walletAge)}</dd>
         </div>
       </dl>

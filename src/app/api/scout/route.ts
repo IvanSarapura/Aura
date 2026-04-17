@@ -87,6 +87,37 @@ async function fetchCeloscanStats(address: string): Promise<BlockscoutStats> {
   return { txCount, usdmVolume, lastActive, walletAge };
 }
 
+// ── Builder detection — wallet has deployed at least one contract ─────────────
+
+async function detectIsBuilder(
+  address: string,
+  chainId: number,
+): Promise<boolean> {
+  try {
+    if (chainId === CELO_MAINNET_ID) {
+      const apiKey =
+        process.env.CELOSCAN_API_KEY ??
+        process.env.NEXT_PUBLIC_CELOSCAN_API_KEY ??
+        '';
+      const url = `https://api.celoscan.io/api?chainid=42220&module=account&action=txlist&address=${address}&sort=asc&page=1&offset=20&apikey=${apiKey}`;
+      const res = await fetch(url);
+      const json = res.ok ? await res.json() : { result: [] };
+      const txs = Array.isArray(json.result) ? json.result : [];
+      return txs.some((tx: { to?: string }) => tx.to === '' || tx.to === null);
+    } else {
+      const base = 'https://celo-sepolia.blockscout.com/api/v2';
+      const res = await fetch(
+        `${base}/addresses/${address}/transactions?filter=to%7Cfrom&page_size=20`,
+      );
+      const json = res.ok ? await res.json() : { items: [] };
+      const txs = Array.isArray(json.items) ? json.items : [];
+      return txs.some((tx: { to?: unknown }) => tx.to === null || tx.to === '');
+    }
+  } catch {
+    return false;
+  }
+}
+
 // ── Trust level heuristic (fallback when no AI key) ──────────────────────────
 
 function deriveTrustLevel(stats: BlockscoutStats): TrustLevel {
@@ -102,6 +133,7 @@ function deriveTrustLevel(stats: BlockscoutStats): TrustLevel {
 function buildFallbackResult(
   address: string,
   stats: BlockscoutStats,
+  isBuilder: boolean,
 ): ScoutResult {
   const trustLevel = deriveTrustLevel(stats);
   const headlines: Record<TrustLevel, string> = {
@@ -109,17 +141,20 @@ function buildFallbackResult(
     Medium: 'Growing wallet with moderate activity',
     Low: 'New or low-activity wallet',
   };
+  const tags: string[] = [
+    trustLevel === 'High'
+      ? 'Veteran'
+      : trustLevel === 'Medium'
+        ? 'Active'
+        : 'Newcomer',
+    parseFloat(stats.usdmVolume) > 0 ? 'USDm User' : 'No transfers',
+  ];
+  if (isBuilder) tags.push('Builder');
   return {
     trustLevel,
     headline: headlines[trustLevel],
-    tags: [
-      trustLevel === 'High'
-        ? 'Veteran'
-        : trustLevel === 'Medium'
-          ? 'Active'
-          : 'Newcomer',
-      parseFloat(stats.usdmVolume) > 0 ? 'USDm User' : 'No transfers',
-    ],
+    tags,
+    isBuilder,
     stats,
   };
 }
@@ -129,6 +164,7 @@ function buildFallbackResult(
 async function analyzeWithClaude(
   address: string,
   stats: BlockscoutStats,
+  isBuilder: boolean,
 ): Promise<ScoutResult> {
   const client = new Anthropic();
 
@@ -148,12 +184,14 @@ Stats:
 - USDm volume: $${stats.usdmVolume}
 - Last active: ${stats.lastActive}
 - Wallet age: ${stats.walletAge}
+- Is smart contract deployer: ${isBuilder}
 
 Rules:
 - trustLevel High: txCount ≥ 50, wallet age ≥ 180 days, volume ≥ $100
 - trustLevel Medium: txCount ≥ 10, wallet age ≥ 30 days
 - trustLevel Low: everything else
-- tags should reflect activity patterns (e.g. "Veteran", "DeFi User", "Early Adopter", "Regular Tipper")
+- If isBuilder is true, always include "Builder" in tags
+- tags should reflect activity patterns (e.g. "Veteran", "DeFi User", "Early Adopter", "Regular Tipper", "Builder")
 - headline must be encouraging and factual
 
 Return ONLY valid JSON. No markdown, no explanation.`;
@@ -168,8 +206,8 @@ Return ONLY valid JSON. No markdown, no explanation.`;
     message.content[0] as { type: string; text: string }
   ).text.trim();
   const parsed = JSON.parse(raw) as ScoutResult;
-  // Always echo back the server-fetched stats to prevent hallucination
-  return { ...parsed, stats };
+  // Always echo back server-fetched stats and isBuilder to prevent hallucination
+  return { ...parsed, stats, isBuilder };
 }
 
 // ── Route handler ─────────────────────────────────────────────────────────────
@@ -189,14 +227,17 @@ export async function GET(request: Request) {
         : CELO_SEPOLIA_ID,
     );
 
-    const stats = await (chainId === CELO_MAINNET_ID
-      ? fetchCeloscanStats(address)
-      : fetchBlockscoutStats(address));
+    const [stats, isBuilder] = await Promise.all([
+      chainId === CELO_MAINNET_ID
+        ? fetchCeloscanStats(address)
+        : fetchBlockscoutStats(address),
+      detectIsBuilder(address, chainId),
+    ]);
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     const result = apiKey
-      ? await analyzeWithClaude(address, stats)
-      : buildFallbackResult(address, stats);
+      ? await analyzeWithClaude(address, stats, isBuilder)
+      : buildFallbackResult(address, stats, isBuilder);
 
     return NextResponse.json(result);
   } catch (err) {

@@ -1,0 +1,192 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  padding: 0 0.375rem;
+  background: color-mix(in srgb, var(--color-celo-green) 15%, transparent);
+  color: var(--color-celo-green);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* ── Individual tip card ── */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.875rem 1rem;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast, 0.15s ease);
+}
+
+.item:hover {
+  border-color: color-mix(in srgb, var(--color-celo-green) 35%, transparent);
+}
+
+.itemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.amount {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-celo-green);
+  white-space: nowrap;
+}
+
+.tokenSymbol {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-left: 0.25rem;
+}
+
+.from {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.itemMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.category {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  background: color-mix(in srgb, var(--color-celo-gold) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-celo-gold) 25%, transparent);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-celo-gold);
+  text-transform: capitalize;
+}
+
+.message {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary, #c0c0d8);
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.date {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ── Skeleton loading ── */
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.skeletonItem {
+  height: 4.5rem;
+  background: linear-gradient(
+    90deg,
+    var(--color-surface) 25%,
+    var(--color-surface-2, #1e1e2e) 50%,
+    var(--color-surface) 75%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--radius-md);
+  animation: shimmer 1.4s infinite;
+  border: 1.5px solid var(--color-border);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+/* ── Empty state ── */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.75rem 1rem;
+  background: var(--color-surface);
+  border: 1.5px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 1.75rem;
+  opacity: 0.6;
+}
+
+.emptyText {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  max-width: 22ch;
+}
+
+/* ── Error state ── */
+
+.errorState {
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--color-error) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-error) 20%, transparent);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}

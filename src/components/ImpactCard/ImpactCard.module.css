@@ -80,6 +80,66 @@
   color: var(--color-celo-green);
 }
 
+/* ── Trust meter ── */
+
+.meterWrapper {
+  margin-bottom: 1rem;
+}
+
+.meterTrack {
+  height: 5px;
+  background: var(--color-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.meterFill {
+  height: 100%;
+  border-radius: 999px;
+  animation: growMeter 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
+  transform-origin: left;
+}
+
+.meterFillLow {
+  background: var(--color-error);
+  width: 33%;
+}
+.meterFillMedium {
+  background: var(--color-celo-gold);
+  width: 66%;
+}
+.meterFillHigh {
+  background: var(--color-celo-green);
+  width: 100%;
+}
+
+@keyframes growMeter {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ── Builder badge ── */
+
+.builderBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  background: color-mix(in srgb, #8a63d2 15%, transparent);
+  border: 1px solid color-mix(in srgb, #8a63d2 35%, transparent);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #b899f7;
+  letter-spacing: 0.02em;
+}
+
+/* ── Stats ── */
+
 .stats {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -89,18 +149,26 @@
 .stat {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+  gap: 0.25rem;
 }
 
-.stat dt {
+.statLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
   font-size: 0.75rem;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
+.statIcon {
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
 .stat dd {
   font-size: 0.9375rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--color-text-primary, #f0f0fa);
 }

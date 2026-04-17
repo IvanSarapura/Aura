@@ -33,15 +33,18 @@
 .textarea {
   width: 100%;
   padding: 0.75rem 1rem;
+  min-height: 3rem; /* 48px touch target */
   background: var(--color-surface);
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: var(--color-text-primary);
+  color: var(--color-text-primary, #f0f0fa);
   font-size: 0.9375rem;
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    border-color var(--transition-fast, 0.15s ease),
+    box-shadow var(--transition-fast, 0.15s ease);
   outline: none;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .input:focus,
@@ -109,7 +112,8 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.875rem;
+  padding: 0;
+  height: 3.5rem; /* 56px — prominent CTA */
   background: var(--color-celo-green);
   color: #000;
   border: none;
@@ -118,8 +122,9 @@
   font-weight: 700;
   cursor: pointer;
   transition:
-    opacity 0.15s ease,
+    opacity var(--transition-fast, 0.15s ease),
     transform 0.1s ease;
+  width: 100%;
 }
 
 .button:hover:not(:disabled) {

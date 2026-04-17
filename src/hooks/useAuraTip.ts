@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   useAccount,
+  usePublicClient,
   useReadContract,
   useSimulateContract,
   useWriteContract,
@@ -18,6 +19,7 @@ export type TipPhase = 'idle' | 'approving' | 'tipping' | 'success' | 'error';
 interface Params {
   recipient: Address;
   amountWei: bigint;
+  tokenAddress: Address;
   category: string;
   message: string;
 }
@@ -25,6 +27,7 @@ interface Params {
 export function useAuraTip({
   recipient,
   amountWei,
+  tokenAddress,
   category,
   message,
 }: Params) {
@@ -34,14 +37,17 @@ export function useAuraTip({
   const [tipTxHash, setTipTxHash] = useState<Hash | undefined>();
   const [errorMsg, setErrorMsg] = useState<string | undefined>();
 
-  // Guard: only work when wallet is connected and on a supported chain
   const contracts =
     chainId && isSupportedChain(chainId) ? getContracts(chainId) : null;
-  const ready = !!address && !!contracts && amountWei > 0n;
+  const ready =
+    !!address &&
+    !!contracts &&
+    amountWei > 0n &&
+    tokenAddress !== '0x0000000000000000000000000000000000000000';
 
-  // ── 1. Read current USDm allowance ──────────────────────────────────────
+  // ── 1. Read current token allowance ─────────────────────────────────────
   const { data: allowance } = useReadContract({
-    address: contracts?.usdm,
+    address: tokenAddress,
     abi: erc20Abi,
     functionName: 'allowance',
     args: address && contracts ? [address, contracts.auraTip] : undefined,
@@ -50,9 +56,9 @@ export function useAuraTip({
 
   const needsApproval = !allowance || allowance < amountWei;
 
-  // ── 2. Pre-flight simulations (run in background while user fills form) ──
+  // ── 2. Pre-flight simulations ────────────────────────────────────────────
   const { data: approveSim, error: approveSimErr } = useSimulateContract({
-    address: contracts?.usdm,
+    address: tokenAddress,
     abi: erc20Abi,
     functionName: 'approve',
     args: contracts ? [contracts.auraTip, amountWei] : undefined,
@@ -63,19 +69,14 @@ export function useAuraTip({
     address: contracts?.auraTip,
     abi: auraTipAbi,
     functionName: 'tip',
-    args: [recipient, amountWei, category, message],
+    args: [recipient, amountWei, tokenAddress, category, message],
     query: { enabled: ready && phase === 'idle' },
   });
 
-  // Store the latest tipSim in a ref so the approve→tip effect always has it
-  const tipSimRef = useRef(tipSim);
-  useEffect(() => {
-    tipSimRef.current = tipSim;
-  }, [tipSim]);
-
+  const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
 
-  // ── 3. Wait for receipts ────────────────────────────────────────────────
+  // ── 3. Wait for receipts ─────────────────────────────────────────────────
   const { isSuccess: approveConfirmed } = useWaitForTransactionReceipt({
     hash: approveTxHash,
   });
@@ -84,28 +85,35 @@ export function useAuraTip({
   });
 
   // ── 4. Phase transitions ─────────────────────────────────────────────────
-  // After approve confirms → execute tip
+  // After approval confirms, re-simulate tip with fresh on-chain state
+  // (allowance is now set, so the simulation will succeed this time).
   useEffect(() => {
     if (!approveConfirmed || phase !== 'approving') return;
-    const sim = tipSimRef.current;
-    if (!sim) {
-      setErrorMsg('Tip simulation unavailable');
+    if (!contracts || !address || !publicClient) {
+      setErrorMsg('Client not available');
       setPhase('error');
       return;
     }
-
     setPhase('tipping');
-    writeContractAsync(sim.request).then(setTipTxHash).catch(handleError);
-    // Intentional: only re-run when approveConfirmed flips to true
+    publicClient
+      .simulateContract({
+        address: contracts.auraTip,
+        abi: auraTipAbi,
+        functionName: 'tip',
+        args: [recipient, amountWei, tokenAddress, category, message],
+        account: address,
+      })
+      .then(({ request }) => writeContractAsync(request))
+      .then(setTipTxHash)
+      .catch(handleError);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [approveConfirmed]);
 
-  // After tip confirms → success
   useEffect(() => {
     if (tipConfirmed && phase === 'tipping') setPhase('success');
   }, [tipConfirmed, phase]);
 
-  // ── 5. Submit ─────────────────────────────────────────────────────────────
+  // ── 5. Submit ────────────────────────────────────────────────────────────
   const submit = useCallback(async () => {
     if (phase !== 'idle' || !ready) return;
     setErrorMsg(undefined);
@@ -131,7 +139,6 @@ export function useAuraTip({
   }, [phase, ready, needsApproval, approveSim, tipSim, writeContractAsync]);
 
   function handleError(err: unknown) {
-    // User rejected — return to idle silently
     const code = (err as { code?: number }).code;
     if (code === 4001 || code === -32603) {
       setPhase('idle');

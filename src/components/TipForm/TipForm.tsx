@@ -1,13 +1,21 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { parseUnits } from 'viem';
+import { useAccount } from 'wagmi';
 import type { Address } from 'viem';
 import { tipSchema, TIP_CATEGORIES, type TipFormData } from '@/lib/schemas/tip';
 import { useAuraTip } from '@/hooks/useAuraTip';
 import { TxStatus } from '@/components/TxStatus/TxStatus';
 import { ShareCard } from '@/components/ShareCard/ShareCard';
+import {
+  isSupportedChain,
+  getSupportedTokens,
+  getDefaultToken,
+  type TokenInfo,
+} from '@/config/contracts';
 import type { TrustLevel } from '@/hooks/useScout';
 import styles from './TipForm.module.css';
 
@@ -18,13 +26,30 @@ interface Props {
 
 const PHASE_LABELS = {
   idle: 'Send tip',
-  approving: 'Approving USDm…',
+  approving: 'Approving…',
   tipping: 'Sending tip…',
   success: 'Tip sent!',
   error: 'Try again',
 } as const;
 
 export function TipForm({ recipient, trustLevel }: Props) {
+  const { chainId } = useAccount();
+
+  const supportedTokens: readonly TokenInfo[] =
+    chainId && isSupportedChain(chainId) ? getSupportedTokens(chainId) : [];
+
+  const [selectedToken, setSelectedToken] = useState<TokenInfo | undefined>(
+    chainId && isSupportedChain(chainId) ? getDefaultToken(chainId) : undefined,
+  );
+
+  useEffect(() => {
+    setSelectedToken(
+      chainId && isSupportedChain(chainId)
+        ? getDefaultToken(chainId)
+        : undefined,
+    );
+  }, [chainId]);
+
   const {
     register,
     handleSubmit,
@@ -42,7 +67,7 @@ export function TipForm({ recipient, trustLevel }: Props) {
 
   const amountWei = (() => {
     try {
-      return parseUnits(amount || '0', 18);
+      return parseUnits(amount || '0', selectedToken?.decimals ?? 18);
     } catch {
       return 0n;
     }
@@ -60,25 +85,58 @@ export function TipForm({ recipient, trustLevel }: Props) {
   } = useAuraTip({
     recipient,
     amountWei,
+    tokenAddress:
+      selectedToken?.address ?? '0x0000000000000000000000000000000000000000',
     category,
     message,
   });
 
-  const onValid = () => submit();
+  // Reset tip flow when token changes
+  useEffect(() => {
+    reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedToken?.address]);
 
+  const onValid = () => submit();
   const handleReset = () => {
     reset();
     resetForm();
   };
-
   const isWorking = phase === 'approving' || phase === 'tipping';
 
   return (
     <form className={styles.form} onSubmit={handleSubmit(onValid)} noValidate>
+      {/* Token selector — only shown when multiple tokens available */}
+      {supportedTokens.length > 1 && (
+        <div className={styles.field}>
+          <label htmlFor="tip-token" className={styles.label}>
+            Token
+          </label>
+          <select
+            id="tip-token"
+            className={styles.select}
+            disabled={isWorking}
+            value={selectedToken?.address ?? ''}
+            onChange={(e) => {
+              const token = supportedTokens.find(
+                (t) => t.address.toLowerCase() === e.target.value.toLowerCase(),
+              );
+              if (token) setSelectedToken(token);
+            }}
+          >
+            {supportedTokens.map((t) => (
+              <option key={t.address} value={t.address}>
+                {t.symbol} — {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Amount */}
       <div className={styles.field}>
         <label htmlFor="tip-amount" className={styles.label}>
-          Amount (USDm)
+          Amount
         </label>
         <div className={styles.amountRow}>
           <input
@@ -91,7 +149,7 @@ export function TipForm({ recipient, trustLevel }: Props) {
             disabled={isWorking}
             {...register('amount')}
           />
-          <span className={styles.unit}>USDm</span>
+          <span className={styles.unit}>{selectedToken?.symbol ?? '—'}</span>
         </div>
         {errors.amount && (
           <p className={styles.error}>{errors.amount.message}</p>
@@ -136,21 +194,19 @@ export function TipForm({ recipient, trustLevel }: Props) {
         )}
       </div>
 
-      {/* Approval hint */}
       {needsApproval && phase === 'idle' && amountWei > 0n && (
         <p className={styles.hint}>
-          Two steps: first approve USDm, then send the tip.
+          Two steps: first approve {selectedToken?.symbol ?? 'token'}, then send
+          the tip.
         </p>
       )}
 
-      {/* Error */}
       {phase === 'error' && errorMsg && (
         <p className={styles.errorMsg} role="alert">
           {errorMsg}
         </p>
       )}
 
-      {/* Tx progress */}
       <TxStatus
         phase={phase}
         approveTxHash={approveTxHash}
@@ -158,7 +214,6 @@ export function TipForm({ recipient, trustLevel }: Props) {
         errorMsg={errorMsg}
       />
 
-      {/* Success — show ShareCard */}
       {phase === 'success' && (
         <ShareCard
           recipient={recipient}
@@ -169,7 +224,6 @@ export function TipForm({ recipient, trustLevel }: Props) {
         />
       )}
 
-      {/* Submit */}
       {phase !== 'success' && (
         <button
           className={styles.button}

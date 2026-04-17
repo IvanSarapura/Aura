@@ -4,6 +4,8 @@ import { useScout } from '@/hooks/useScout';
 import { ImpactCard } from '@/components/ImpactCard/ImpactCard';
 import { TipForm } from '@/components/TipForm/TipForm';
 import { PaymentLink } from '@/components/PaymentLink/PaymentLink';
+import { TipFeed } from '@/components/TipFeed/TipFeed';
+import { SelfProfileBanner } from '@/components/SelfProfileBanner/SelfProfileBanner';
 import { useAccount } from 'wagmi';
 import type { Address } from 'viem';
 import styles from './ReceiverProfile.module.css';
@@ -14,7 +16,9 @@ interface Props {
 
 function ProfileContent({ address }: Props) {
   const { data, isPending, isError } = useScout(address);
-  const { isConnected } = useAccount();
+  const { address: myAddress, isConnected } = useAccount();
+  const isOwnProfile =
+    !!myAddress && myAddress.toLowerCase() === address.toLowerCase();
 
   if (isPending) {
     return (
@@ -36,7 +40,15 @@ function ProfileContent({ address }: Props) {
     <div className={styles.content}>
       <ImpactCard result={data} address={address} />
 
+      {isOwnProfile && <SelfProfileBanner address={address} />}
+
       <PaymentLink address={address} />
+
+      <TipFeed address={address} type="received" />
+
+      {isOwnProfile && (
+        <TipFeed address={address} type="sent" title="Tips you sent" />
+      )}
 
       {isConnected ? (
         <section className={styles.tipSection}>

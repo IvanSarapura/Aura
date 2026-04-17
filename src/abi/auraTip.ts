@@ -1,16 +1,17 @@
 export const auraTipAbi = [
   {
-    type: 'constructor',
-    inputs: [{ name: '_usdm', type: 'address', internalType: 'address' }],
-    stateMutability: 'nonpayable',
-  },
-  {
     type: 'event',
     name: 'TipSent',
     anonymous: false,
     inputs: [
       { name: 'from', type: 'address', internalType: 'address', indexed: true },
       { name: 'to', type: 'address', internalType: 'address', indexed: true },
+      {
+        name: 'token',
+        type: 'address',
+        internalType: 'address',
+        indexed: true,
+      },
       {
         name: 'amount',
         type: 'uint256',
@@ -38,16 +39,10 @@ export const auraTipAbi = [
     inputs: [
       { name: 'recipient', type: 'address', internalType: 'address' },
       { name: 'amount', type: 'uint256', internalType: 'uint256' },
+      { name: 'token', type: 'address', internalType: 'address' },
       { name: 'category', type: 'string', internalType: 'string' },
       { name: 'message', type: 'string', internalType: 'string' },
     ],
     outputs: [],
-  },
-  {
-    type: 'function',
-    name: 'usdm',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ name: '', type: 'address', internalType: 'contract IERC20' }],
   },
 ] as const;

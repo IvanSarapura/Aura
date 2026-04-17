@@ -19,11 +19,13 @@
 
 .urlInput {
   flex: 1;
+  min-width: 0; /* prevent flex overflow */
   padding: 0.625rem 0.875rem;
+  min-height: 3rem; /* 48px touch target */
   background: var(--color-surface);
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: var(--color-text-secondary);
+  color: var(--color-text-secondary, #c0c0d8);
   font-size: 0.8125rem;
   font-family: 'Geist Mono', monospace;
   outline: none;
@@ -38,18 +40,20 @@
 }
 
 .copyBtn {
-  padding: 0.625rem 1rem;
+  padding: 0 1rem;
+  min-height: 3rem; /* 48px touch target */
   background: var(--color-surface);
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: var(--color-text-primary);
+  color: var(--color-text-primary, #f0f0fa);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
   transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
+    border-color var(--transition-fast, 0.15s ease),
+    color var(--transition-fast, 0.15s ease);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .copyBtn:hover {
