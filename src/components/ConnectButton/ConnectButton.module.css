@@ -1,0 +1,57 @@
+.wrapper {
+  display: flex;
+}
+
+.connectBtn {
+  padding: 0.625rem 1.25rem;
+  background: var(--color-celo-green);
+  color: #000;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.connectBtn:hover {
+  opacity: 0.88;
+}
+
+.wrong {
+  background: var(--color-error);
+  color: #fff;
+}
+
+.accountRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.chainBtn,
+.accountBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.chainBtn:hover,
+.accountBtn:hover {
+  border-color: var(--color-celo-green);
+}
+
+.chainIcon {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+}

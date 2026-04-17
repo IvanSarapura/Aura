@@ -1,15 +1,29 @@
+'use client';
+
+import { useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import type { Address } from 'viem';
+import { ConnectButton } from '@/components/ConnectButton/ConnectButton';
+import { AddressInput } from '@/components/AddressInput/AddressInput';
 import styles from './page.module.css';
 
-export const metadata = {
-  title: 'Aura — Wallet Reputation on Celo',
-};
-
 export default function Home() {
+  const router = useRouter();
   const profile = process.env.NEXT_PUBLIC_CHAIN_PROFILE ?? 'testnet';
   const network = profile === 'mainnet' ? 'Celo Mainnet' : 'Celo Sepolia';
 
+  const handleAddress = useCallback(
+    (address: Address) => router.push(`/${address}`),
+    [router],
+  );
+
   return (
     <main className={styles.main}>
+      <header className={styles.topbar}>
+        <span />
+        <ConnectButton />
+      </header>
+
       <div className={styles.hero}>
         <h1 className={styles.title}>Aura</h1>
         <p className={styles.subtitle}>
@@ -21,8 +35,9 @@ export default function Home() {
           {network}
         </div>
 
-        {/* Phase 0 placeholder — WalletConnect + ReceiverProfile in Phase 2 */}
-        <span className={styles.badge}>Phase 0 — Foundation ✓</span>
+        <div className={styles.inputWrapper}>
+          <AddressInput onSubmit={handleAddress} />
+        </div>
       </div>
     </main>
   );

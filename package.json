@@ -24,6 +24,7 @@
     "contracts:deploy:mainnet": "npm run --prefix contracts deploy:mainnet"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
     "@celo/abis": "^14.0.1",
     "@hookform/resolvers": "^5.2.2",
     "@rainbow-me/rainbowkit": "^2.2.10",
