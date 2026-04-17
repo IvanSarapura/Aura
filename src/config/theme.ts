@@ -1,31 +1,10 @@
-import { darkTheme, lightTheme, type Theme } from '@rainbow-me/rainbowkit';
+import { darkTheme, type Theme } from '@rainbow-me/rainbowkit';
 
-/**
- * Tema custom de RainbowKit que usa el color accent del proyecto (#6c47ff).
- *
- * Para personalizar más opciones, revisá la documentación:
- * https://www.rainbowkit.com/docs/custom-theme
- *
- * Podés cambiar los colores, border radius, font stack, y más.
- * Cada función (lightTheme/darkTheme) acepta un objeto de configuración
- * y devuelve un tema completo que podés sobreescribir parcialmente.
- */
-
-const accentColor = '#6c47ff';
-const accentColorForeground = '#ffffff';
-
-export const customLightTheme: Theme = {
-  ...lightTheme({
-    accentColor,
-    accentColorForeground,
-    borderRadius: 'medium',
-  }),
-};
-
+// Accent = Celo green; foreground = Aura dark background.
 export const customDarkTheme: Theme = {
   ...darkTheme({
-    accentColor,
-    accentColorForeground,
+    accentColor: '#35D07F',
+    accentColorForeground: '#0d0d12',
     borderRadius: 'medium',
   }),
 };

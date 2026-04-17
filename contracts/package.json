@@ -1,0 +1,16 @@
+{
+  "name": "aura-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:testnet": "hardhat run scripts/deploy.ts --network celoSepolia",
+    "deploy:mainnet": "hardhat run scripts/deploy.ts --network celo"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^17.4.2",
+    "hardhat": "^2.22.0"
+  }
+}

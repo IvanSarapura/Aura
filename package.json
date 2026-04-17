@@ -1,9 +1,10 @@
 {
-  "name": "my-web3-boilerplate",
+  "name": "aura",
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=18.18.0"
+    "node": ">=22.10.0",
+    "npm": ">=10"
   },
   "scripts": {
     "dev": "next dev",
@@ -16,7 +17,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "prepare": "husky"
+    "prepare": "husky",
+    "contracts:compile": "npm run --prefix contracts compile",
+    "contracts:test": "npm run --prefix contracts test",
+    "contracts:deploy:testnet": "npm run --prefix contracts deploy:testnet",
+    "contracts:deploy:mainnet": "npm run --prefix contracts deploy:mainnet"
   },
   "dependencies": {
     "@celo/abis": "^14.0.1",
@@ -59,5 +64,6 @@
   "lint-staged": {
     "*.{ts,tsx,mts}": "eslint --fix",
     "*.{ts,tsx,mts,css,json,md}": "prettier --write"
-  }
+  },
+  "engineStrict": "true"
 }

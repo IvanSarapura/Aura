@@ -1,38 +1,36 @@
 .container {
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 2rem;
   text-align: center;
 }
 
 .title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-error);
 }
 
 .message {
-  color: var(--muted);
-  font-size: 0.95rem;
-  max-width: 400px;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  max-width: 360px;
 }
 
-.action {
-  display: inline-block;
-  margin-top: 0.5rem;
-  padding: 0.6rem 1.4rem;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #fff;
-  background: var(--accent);
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  text-decoration: none;
-  transition: opacity 0.15s;
+.button {
+  padding: 0.75rem 1.5rem;
+  border: 1px solid var(--color-celo-green);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-celo-green);
+  font-size: 0.875rem;
+  transition: background 0.15s;
 }
 
-.action:hover {
-  opacity: 0.85;
+.button:hover {
+  background: color-mix(in srgb, var(--color-celo-green) 10%, transparent);
 }
