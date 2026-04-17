@@ -43,7 +43,10 @@ async function fetchBlockscoutStats(address: string): Promise<BlockscoutStats> {
 }
 
 async function fetchCeloscanStats(address: string): Promise<BlockscoutStats> {
-  const apiKey = process.env.NEXT_PUBLIC_CELOSCAN_API_KEY ?? '';
+  const apiKey =
+    process.env.CELOSCAN_API_KEY ??
+    process.env.NEXT_PUBLIC_CELOSCAN_API_KEY ??
+    '';
   const base = 'https://api.celoscan.io/api';
 
   const [txsRes, transfersRes] = await Promise.all([

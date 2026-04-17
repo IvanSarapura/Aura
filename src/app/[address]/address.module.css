@@ -34,3 +34,96 @@
   justify-content: center;
   padding: 2rem 1rem;
 }
+
+/* Error state */
+.errorState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.errorTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.errorMsg {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+}
+
+.errorActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.retryBtn {
+  padding: 0.625rem 1.25rem;
+  background: var(--color-celo-green);
+  color: #000;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.homeLink {
+  padding: 0.625rem 1.25rem;
+  background: transparent;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+/* Loading skeleton */
+.skeleton {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@keyframes shimmer {
+  0% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+
+.skeletonTitle,
+.skeletonSubtitle,
+.skeletonCard {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+.skeletonTitle {
+  height: 2rem;
+  width: 60%;
+}
+.skeletonSubtitle {
+  height: 1rem;
+  width: 40%;
+}
+.skeletonCard {
+  height: 9rem;
+  width: 100%;
+}
