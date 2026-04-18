@@ -10,8 +10,12 @@ export default function AddressLoading() {
         <div className={styles.skeleton}>
           <div className={styles.skeletonTitle} />
           <div className={styles.skeletonSubtitle} />
+          {/* ImpactCard */}
           <div className={styles.skeletonCard} />
-          <div className={styles.skeletonCard} style={{ height: '5rem' }} />
+          {/* PaymentLink */}
+          <div className={styles.skeletonCard} style={{ height: '3.5rem' }} />
+          {/* TipFeed */}
+          <div className={styles.skeletonCard} />
         </div>
       </div>
     </main>

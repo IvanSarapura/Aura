@@ -6,10 +6,9 @@ import { TipForm } from '@/components/TipForm/TipForm';
 import { PaymentLink } from '@/components/PaymentLink/PaymentLink';
 import { TipFeed } from '@/components/TipFeed/TipFeed';
 import { SelfProfileBanner } from '@/components/SelfProfileBanner/SelfProfileBanner';
-import { AuraLoader } from '@/components/AuraLoader/AuraLoader';
+import { ReceiverProfileSkeleton } from './ReceiverProfileSkeleton';
 import { useAccount } from 'wagmi';
 import type { Address } from 'viem';
-import { useAuraTipStats } from '@/hooks/useAuraTipStats';
 import styles from './ReceiverProfile.module.css';
 
 interface Props {
@@ -25,7 +24,7 @@ function ProfileContent({ address, isOwnProfile }: ContentProps) {
   const { isConnected } = useAccount();
 
   if (isPending) {
-    return <AuraLoader inline />;
+    return <ReceiverProfileSkeleton />;
   }
 
   if (isError || !data) {
@@ -64,8 +63,6 @@ function ProfileContent({ address, isOwnProfile }: ContentProps) {
 }
 
 export function ReceiverProfile({ address }: Props) {
-  const { tipsReceivedCount, isPending: statsLoading } =
-    useAuraTipStats(address);
   const { address: myAddress } = useAccount();
   const isOwnProfile =
     !!myAddress && myAddress.toLowerCase() === address.toLowerCase();
@@ -77,14 +74,6 @@ export function ReceiverProfile({ address }: Props) {
           {address.slice(0, 6)}…{address.slice(-4)}
         </h1>
         <p className={styles.addressFull}>{address}</p>
-        {!statsLoading && tipsReceivedCount > 0n && (
-          <span
-            className={styles.onChainBadge}
-            title="Verified tip count from the AuraTip smart contract"
-          >
-            ✓ {tipsReceivedCount.toString()} on-chain tips
-          </span>
-        )}
       </header>
 
       {isOwnProfile && <SelfProfileBanner address={address} />}

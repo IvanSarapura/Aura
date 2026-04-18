@@ -125,7 +125,7 @@
   max-width: 480px;
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: 1.5rem;
 }
 
 .skeletonTitle,
