@@ -1,0 +1,26 @@
+.wrapper {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-bottom: 3rem;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+}
+
+.backLink {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  letter-spacing: -0.01em;
+  transition: color var(--transition-fast);
+}
+
+.backLink:hover {
+  color: var(--color-text-secondary);
+}

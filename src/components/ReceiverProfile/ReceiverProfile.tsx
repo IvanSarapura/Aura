@@ -41,7 +41,11 @@ function ProfileContent({ address, isOwnProfile }: ContentProps) {
 
       <PaymentLink address={address} />
 
-      <TipFeed address={address} type="received" />
+      <TipFeed
+        address={address}
+        type="received"
+        viewAllHref={`/${address}/tips`}
+      />
 
       {isOwnProfile && (
         <TipFeed address={address} type="sent" title="Tips you sent" />

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { Address } from 'viem';
 import { useTips, type TipEvent } from '@/hooks/useTips';
 import styles from './TipFeed.module.css';
@@ -8,6 +9,7 @@ interface Props {
   address: Address;
   type?: 'received' | 'sent';
   title?: string;
+  viewAllHref?: string;
 }
 
 function formatDate(iso: string): string {
@@ -65,7 +67,12 @@ function SkeletonList() {
   );
 }
 
-export function TipFeed({ address, type = 'received', title }: Props) {
+export function TipFeed({
+  address,
+  type = 'received',
+  title,
+  viewAllHref,
+}: Props) {
   const {
     data,
     isPending,
@@ -86,10 +93,10 @@ export function TipFeed({ address, type = 'received', title }: Props) {
     <section className={styles.section} aria-label={sectionTitle}>
       <div className={styles.header}>
         <h2 className={styles.title}>{sectionTitle}</h2>
-        {!isPending && !isError && total > 0 && (
-          <span className={styles.count} aria-label={`${total} tips`}>
-            {total}
-          </span>
+        {!isPending && !isError && total > 0 && viewAllHref && (
+          <Link href={viewAllHref} className={styles.viewAll}>
+            View all
+          </Link>
         )}
       </div>
 
