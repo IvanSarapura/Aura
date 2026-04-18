@@ -43,7 +43,7 @@ async function fetchCeloscanTips(
   url.searchParams.set('offset', '50');
   url.searchParams.set('apikey', apiKey);
 
-  const res = await fetch(url.toString(), { next: { revalidate: 120 } });
+  const res = await fetch(url.toString(), { next: { revalidate: 30 } });
   if (!res.ok) throw new Error(`Celoscan error: ${res.status}`);
 
   const json = await res.json();
@@ -58,7 +58,7 @@ async function fetchBlockscoutTips(
   const base = 'https://celo-sepolia.blockscout.com/api/v2';
   const url = `${base}/addresses/${AURA_TIP_ADDRESS}/logs?topic=${TIP_SENT_TOPIC0}&page_size=50`;
 
-  const res = await fetch(url, { next: { revalidate: 120 } });
+  const res = await fetch(url, { next: { revalidate: 30 } });
   // 404/422 = contract not indexed yet or unknown address — not an error
   if (res.status === 404 || res.status === 422) return [];
   if (!res.ok) throw new Error(`Blockscout error: ${res.status}`);

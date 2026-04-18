@@ -85,7 +85,14 @@ export function TipFeed({
     refetch,
   } = useTips(address, type);
 
-  const tips = data?.pages.flatMap((p) => p.tips) ?? [];
+  // Deduplicate by txHash — offset pagination drifts when new tips are added
+  // between a page-1 refetch and a subsequent "Load more" call.
+  const seen = new Set<string>();
+  const tips = (data?.pages.flatMap((p) => p.tips) ?? []).filter((tip) => {
+    if (seen.has(tip.txHash)) return false;
+    seen.add(tip.txHash);
+    return true;
+  });
   const total = data?.pages[0]?.total ?? 0;
 
   const sectionTitle =
@@ -130,11 +137,7 @@ export function TipFeed({
         <>
           <ul className={styles.list} aria-label={`${sectionTitle} list`}>
             {tips.map((tip) => (
-              <TipItem
-                key={`${tip.txHash}-${tip.from}`}
-                tip={tip}
-                type={type}
-              />
+              <TipItem key={tip.txHash} tip={tip} type={type} />
             ))}
           </ul>
 
