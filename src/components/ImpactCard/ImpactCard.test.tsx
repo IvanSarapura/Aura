@@ -77,14 +77,21 @@ describe('ImpactCard', () => {
 
   // ── Aura Activity section ────────────────────────────────────────────────────
 
-  it('renders Aura Activity section title', () => {
+  it('does not render Aura stats when auraStats is null', () => {
     render(<ImpactCard result={BASE_RESULT} address={ADDRESS} />);
-    expect(screen.getByText('✦ Aura Activity')).toBeInTheDocument();
+    expect(screen.queryByText('Tips Received')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tips Sent')).not.toBeInTheDocument();
   });
 
-  it('renders "No Aura activity yet" when auraStats is null', () => {
-    render(<ImpactCard result={BASE_RESULT} address={ADDRESS} />);
-    expect(screen.getByText('No Aura activity yet')).toBeInTheDocument();
+  it('renders Aura stats labels when auraStats is provided', () => {
+    render(
+      <ImpactCard
+        result={{ ...BASE_RESULT, auraStats: AURA_STATS }}
+        address={ADDRESS}
+      />,
+    );
+    expect(screen.getByText('Tips Received')).toBeInTheDocument();
+    expect(screen.getByText('Tips Sent')).toBeInTheDocument();
   });
 
   it('renders tip counts when auraStats is provided', () => {

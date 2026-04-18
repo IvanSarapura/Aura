@@ -8,22 +8,21 @@ const TIP_SENT_EVENT = parseAbiItem(
   'event TipSent(address indexed from, address indexed to, address indexed token, uint256 amount, string category, string message)',
 );
 
-function alchemyUrl(chain: 'testnet' | 'mainnet'): string | undefined {
+function alchemyMainnetUrl(): string | undefined {
   const key = process.env.ALCHEMY_API_KEY;
-  if (!key) return undefined;
-  return chain === 'mainnet'
-    ? `https://celo-mainnet.g.alchemy.com/v2/${key}`
-    : `https://celo-sepolia.g.alchemy.com/v2/${key}`;
+  return key ? `https://celo-mainnet.g.alchemy.com/v2/${key}` : undefined;
 }
 
+// Testnet uses the public Celo Sepolia Forno RPC — Alchemy free tier limits
+// eth_getLogs to 10 blocks, making it useless for event scanning.
 const TESTNET_CLIENT = createPublicClient({
   chain: celoSepolia,
-  transport: http(alchemyUrl('testnet')),
+  transport: http(),
 });
 
 const MAINNET_CLIENT = createPublicClient({
   chain: celo,
-  transport: http(alchemyUrl('mainnet')),
+  transport: http(alchemyMainnetUrl()),
 });
 
 function resolveSymbol(token: string, chainId: SupportedChainId): string {

@@ -195,41 +195,32 @@
   letter-spacing: -0.01em;
 }
 
-/* ── Aura Activity section ── */
+/* ── Aura stats — visual separator within unified grid ── */
 
-.auraSection {
-  margin-top: 1.25rem;
-  padding-top: 1rem;
+.statDivider {
+  grid-column: 1;
+  padding-top: 0.75rem;
   border-top: 1px solid
     color-mix(in srgb, var(--color-celo-green) 18%, transparent);
 }
 
-.auraSectionTitle {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-celo-green);
-  margin: 0 0 0.875rem;
-  opacity: 0.85;
+.statDivider + .stat,
+.statDivider ~ .stat {
+  padding-top: 0.75rem;
+  border-top: 1px solid
+    color-mix(in srgb, var(--color-celo-green) 18%, transparent);
 }
 
-.auraStats {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.875rem;
-  margin-bottom: 0.875rem;
+.auraLabel {
+  color: color-mix(
+    in srgb,
+    var(--color-celo-green) 65%,
+    var(--color-text-muted)
+  );
 }
 
 .auraHighlight {
   color: var(--color-celo-green);
-}
-
-.auraEmpty {
-  font-size: 0.8125rem;
-  color: var(--color-text-muted);
-  font-style: italic;
-  margin: 0;
 }
 
 .categories {

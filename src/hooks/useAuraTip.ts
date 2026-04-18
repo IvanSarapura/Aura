@@ -9,6 +9,7 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
 } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Address, Hash } from 'viem';
 import { erc20Abi } from '@/abi/erc20';
 import { auraTipAbi } from '@/abi/auraTip';
@@ -32,6 +33,7 @@ export function useAuraTip({
   message,
 }: Params) {
   const { address, chainId } = useAccount();
+  const queryClient = useQueryClient();
   const [phase, setPhase] = useState<TipPhase>('idle');
   const [approveTxHash, setApproveTxHash] = useState<Hash | undefined>();
   const [tipTxHash, setTipTxHash] = useState<Hash | undefined>();
@@ -139,8 +141,13 @@ export function useAuraTip({
   }, [approveConfirmed]);
 
   useEffect(() => {
-    if (tipConfirmed && phase === 'tipping') setPhase('success');
-  }, [tipConfirmed, phase]);
+    if (tipConfirmed && phase === 'tipping') {
+      setPhase('success');
+      // Refresh tip feed and scout card so new data appears immediately
+      void queryClient.invalidateQueries({ queryKey: ['tips'] });
+      void queryClient.invalidateQueries({ queryKey: ['scout', recipient] });
+    }
+  }, [tipConfirmed, phase, queryClient, recipient]);
 
   // ── 5. Submit ────────────────────────────────────────────────────────────
   const submit = useCallback(async () => {

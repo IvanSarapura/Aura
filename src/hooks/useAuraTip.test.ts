@@ -10,6 +10,10 @@ vi.mock('wagmi', () => ({
   useWaitForTransactionReceipt: vi.fn(),
 }));
 
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() })),
+}));
+
 import {
   useAccount,
   usePublicClient,
