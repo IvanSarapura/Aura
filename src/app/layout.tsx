@@ -55,11 +55,12 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // next/font variables on <html> so :root tokens in globals.css (e.g. --font-sans) resolve.
+  const fontVariables = `${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`;
+
   return (
-    <html lang="en">
-      <body
-        className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}
-      >
+    <html lang="en" className={fontVariables}>
+      <body>
         <ClientWeb3Provider
           walletConnectProjectId={env.walletConnectProjectId}
           appName={env.appName}

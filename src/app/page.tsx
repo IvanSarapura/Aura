@@ -25,7 +25,7 @@ export default function Home() {
       </header>
 
       <div className={styles.hero}>
-        <h1 className={styles.title}>✦ Aura</h1>
+        <h1 className={styles.title}>✦Aura</h1>
         <p className={styles.subtitle}>
           Wallet reputation + micro-payments on Celo
         </p>

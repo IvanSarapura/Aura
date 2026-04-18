@@ -38,10 +38,10 @@
 }
 
 .title {
-  font-family: var(--font-display);
+  font-family: var(--font-wordmark);
   font-size: clamp(3rem, 10vw, 3.75rem);
-  font-weight: 700;
-  letter-spacing: -0.05em;
+  font-weight: var(--font-wordmark-weight);
+  letter-spacing: var(--font-wordmark-letter-spacing);
   line-height: 1;
   background: linear-gradient(
     135deg,
