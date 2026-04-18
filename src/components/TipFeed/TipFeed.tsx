@@ -31,28 +31,30 @@ function shortenAddress(addr: string): string {
 function TipItem({ tip, type }: { tip: TipEvent; type: 'received' | 'sent' }) {
   const peer = type === 'received' ? tip.from : tip.to;
   const peerLabel = type === 'received' ? 'from' : 'to';
+  const hasMessage = tip.message.trim() !== '';
 
   return (
     <li className={styles.item}>
       <div className={styles.itemTop}>
-        <span>
+        <span className={styles.amountGroup}>
           <span className={styles.amount}>{tip.amount}</span>
           <span className={styles.tokenSymbol}>{tip.tokenSymbol}</span>
         </span>
+        <span className={styles.date}>{formatDate(tip.timestamp)}</span>
+      </div>
+
+      <div className={styles.itemSub}>
         <span className={styles.from}>
           {peerLabel} {shortenAddress(peer)}
         </span>
+        <span className={styles.category}>{tip.category}</span>
       </div>
 
-      <div className={styles.itemMeta}>
-        <span className={styles.category}>{tip.category}</span>
-        {tip.message.trim() !== '' && (
-          <span className={styles.message} title={tip.message}>
-            &ldquo;{tip.message}&rdquo;
-          </span>
-        )}
-        <span className={styles.date}>{formatDate(tip.timestamp)}</span>
-      </div>
+      {hasMessage && (
+        <p className={styles.message} title={tip.message}>
+          &ldquo;{tip.message}&rdquo;
+        </p>
+      )}
     </li>
   );
 }
