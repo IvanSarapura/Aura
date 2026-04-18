@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { parseUnits } from 'viem';
 import { useAccount } from 'wagmi';
 import type { Address } from 'viem';
-import { tipSchema, TIP_CATEGORIES, type TipFormData } from '@/lib/schemas/tip';
+import { tipSchema, type TipFormData } from '@/lib/schemas/tip';
 import { useAuraTip } from '@/hooks/useAuraTip';
 import { TxStatus } from '@/components/TxStatus/TxStatus';
 import { ShareCard } from '@/components/ShareCard/ShareCard';
@@ -17,6 +17,7 @@ import {
   type TokenInfo,
 } from '@/config/contracts';
 import type { TrustLevel } from '@/hooks/useScout';
+import { CategorySelect } from './CategorySelect';
 import styles from './TipForm.module.css';
 
 interface Props {
@@ -52,6 +53,7 @@ export function TipForm({ recipient, trustLevel }: Props) {
 
   const {
     register,
+    control,
     handleSubmit,
     watch,
     reset: resetForm,
@@ -106,132 +108,7 @@ export function TipForm({ recipient, trustLevel }: Props) {
 
   return (
     <form className={styles.form} onSubmit={handleSubmit(onValid)} noValidate>
-      {/* Token selector — only shown when multiple tokens available */}
-      {supportedTokens.length > 1 && (
-        <div className={styles.field}>
-          <label htmlFor="tip-token" className={styles.label}>
-            Token
-          </label>
-          <select
-            id="tip-token"
-            className={styles.select}
-            disabled={isWorking}
-            value={selectedToken?.address ?? ''}
-            onChange={(e) => {
-              const token = supportedTokens.find(
-                (t) => t.address.toLowerCase() === e.target.value.toLowerCase(),
-              );
-              if (token) setSelectedToken(token);
-            }}
-          >
-            {supportedTokens.map((t) => (
-              <option key={t.address} value={t.address}>
-                {t.symbol} — {t.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* Amount */}
-      <div className={styles.field}>
-        <label htmlFor="tip-amount" className={styles.label}>
-          Amount
-        </label>
-        <div className={styles.amountRow}>
-          <input
-            id="tip-amount"
-            className={`${styles.input} ${errors.amount ? styles.inputError : ''}`}
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="0.00"
-            disabled={isWorking}
-            {...register('amount')}
-          />
-          <span className={styles.unit}>{selectedToken?.symbol ?? '—'}</span>
-        </div>
-        {errors.amount && (
-          <p className={styles.error}>{errors.amount.message}</p>
-        )}
-      </div>
-
-      {/* Category */}
-      <div className={styles.field}>
-        <label htmlFor="tip-category" className={styles.label}>
-          Category
-        </label>
-        <div className={styles.selectWrapper}>
-          <select
-            id="tip-category"
-            className={styles.select}
-            disabled={isWorking}
-            {...register('category')}
-          >
-            {TIP_CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c.charAt(0).toUpperCase() + c.slice(1)}
-              </option>
-            ))}
-          </select>
-          <svg
-            className={styles.selectChevron}
-            viewBox="0 0 12 12"
-            fill="none"
-            aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M2 4L6 8L10 4"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-      </div>
-
-      {/* Message */}
-      <div className={styles.field}>
-        <label htmlFor="tip-message" className={styles.label}>
-          Message <span className={styles.optional}>(optional)</span>
-        </label>
-        <textarea
-          id="tip-message"
-          className={`${styles.textarea} ${errors.message ? styles.inputError : ''}`}
-          rows={3}
-          placeholder="Say something nice…"
-          disabled={isWorking}
-          {...register('message')}
-        />
-        <span className={styles.charCount}>{(message ?? '').length}/280</span>
-        {errors.message && (
-          <p className={styles.error}>{errors.message.message}</p>
-        )}
-      </div>
-
-      {needsApproval && phase === 'idle' && amountWei > 0n && (
-        <p className={styles.hint}>
-          Two steps: first approve {selectedToken?.symbol ?? 'token'}, then send
-          the tip.
-        </p>
-      )}
-
-      {phase === 'error' && errorMsg && (
-        <p className={styles.errorMsg} role="alert">
-          {errorMsg}
-        </p>
-      )}
-
-      <TxStatus
-        phase={phase}
-        approveTxHash={approveTxHash}
-        tipTxHash={tipTxHash}
-        errorMsg={errorMsg}
-      />
-
-      {phase === 'success' && (
+      {phase === 'success' ? (
         <ShareCard
           recipient={recipient}
           amountDisplay={amount || '0'}
@@ -239,18 +116,136 @@ export function TipForm({ recipient, trustLevel }: Props) {
           tipTxHash={tipTxHash}
           onReset={handleReset}
         />
-      )}
+      ) : (
+        <div className={styles.formPanel}>
+          {/* Token selector — only shown when multiple tokens available */}
+          {supportedTokens.length > 1 && (
+            <div className={styles.field}>
+              <label htmlFor="tip-token" className={styles.label}>
+                Token
+              </label>
+              <select
+                id="tip-token"
+                className={styles.select}
+                disabled={isWorking}
+                value={selectedToken?.address ?? ''}
+                onChange={(e) => {
+                  const token = supportedTokens.find(
+                    (t) =>
+                      t.address.toLowerCase() === e.target.value.toLowerCase(),
+                  );
+                  if (token) setSelectedToken(token);
+                }}
+              >
+                {supportedTokens.map((t) => (
+                  <option key={t.address} value={t.address}>
+                    {t.symbol} — {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-      {phase !== 'success' && (
-        <button
-          className={styles.button}
-          type="submit"
-          disabled={!canSubmit || isWorking}
-          aria-busy={isWorking}
-        >
-          {isWorking && <span className={styles.spinner} aria-hidden />}
-          {PHASE_LABELS[phase]}
-        </button>
+          {/* Amount */}
+          <div className={styles.field}>
+            <label htmlFor="tip-amount" className={styles.label}>
+              Amount
+            </label>
+            <div className={styles.amountRow}>
+              <input
+                id="tip-amount"
+                className={`${styles.input} ${errors.amount ? styles.inputError : ''}`}
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                disabled={isWorking}
+                {...register('amount')}
+              />
+              <span className={styles.unit}>
+                {selectedToken?.symbol ?? '—'}
+              </span>
+            </div>
+            {errors.amount && (
+              <p className={styles.error}>{errors.amount.message}</p>
+            )}
+          </div>
+
+          {/* Category */}
+          <div className={styles.field}>
+            <label htmlFor="tip-category" className={styles.label}>
+              Category
+            </label>
+            <Controller
+              name="category"
+              control={control}
+              render={({ field }) => (
+                <CategorySelect
+                  id="tip-category"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  disabled={isWorking}
+                  invalid={!!errors.category}
+                />
+              )}
+            />
+            {errors.category && (
+              <p className={styles.error}>{errors.category.message}</p>
+            )}
+          </div>
+
+          {/* Message */}
+          <div className={styles.field}>
+            <label htmlFor="tip-message" className={styles.label}>
+              Message <span className={styles.optional}>(optional)</span>
+            </label>
+            <textarea
+              id="tip-message"
+              className={`${styles.textarea} ${errors.message ? styles.inputError : ''}`}
+              rows={3}
+              placeholder="Say something nice…"
+              disabled={isWorking}
+              {...register('message')}
+            />
+            <span className={styles.charCount}>
+              {(message ?? '').length}/280
+            </span>
+            {errors.message && (
+              <p className={styles.error}>{errors.message.message}</p>
+            )}
+          </div>
+
+          {needsApproval && phase === 'idle' && amountWei > 0n && (
+            <p className={styles.hint}>
+              Two steps: first approve {selectedToken?.symbol ?? 'token'}, then
+              send the tip.
+            </p>
+          )}
+
+          {phase === 'error' && errorMsg && (
+            <p className={styles.errorMsg} role="alert">
+              {errorMsg}
+            </p>
+          )}
+
+          <TxStatus
+            phase={phase}
+            approveTxHash={approveTxHash}
+            tipTxHash={tipTxHash}
+            errorMsg={errorMsg}
+          />
+
+          <button
+            className={styles.button}
+            type="submit"
+            disabled={!canSubmit || isWorking}
+            aria-busy={isWorking}
+          >
+            {isWorking && <span className={styles.spinner} aria-hidden />}
+            {PHASE_LABELS[phase]}
+          </button>
+        </div>
       )}
     </form>
   );
