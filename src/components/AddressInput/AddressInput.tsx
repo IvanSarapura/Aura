@@ -61,7 +61,7 @@ export function AddressInput({ onSubmit, disabled = false }: Props) {
           type="submit"
           disabled={disabled || !value.trim()}
         >
-          Scout
+          Search
         </button>
       </div>
       {error && (

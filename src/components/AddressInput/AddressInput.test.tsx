@@ -5,15 +5,15 @@ import { AddressInput } from './AddressInput';
 const VALID_ADDRESS = '0x1234567890123456789012345678901234567890';
 
 describe('AddressInput', () => {
-  it('renders input and Scout button', () => {
+  it('renders input and Search button', () => {
     render(<AddressInput onSubmit={() => {}} />);
     expect(screen.getByRole('textbox')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /scout/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /search/i })).toBeInTheDocument();
   });
 
   it('submit button is disabled when input is empty', () => {
     render(<AddressInput onSubmit={() => {}} />);
-    expect(screen.getByRole('button', { name: /scout/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /search/i })).toBeDisabled();
   });
 
   it('submit button enables when input has non-whitespace content', () => {
@@ -21,7 +21,7 @@ describe('AddressInput', () => {
     fireEvent.change(screen.getByRole('textbox'), {
       target: { value: VALID_ADDRESS },
     });
-    expect(screen.getByRole('button', { name: /scout/i })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /search/i })).not.toBeDisabled();
   });
 
   it('calls onSubmit with checksummed valid address', () => {
@@ -30,7 +30,7 @@ describe('AddressInput', () => {
     fireEvent.change(screen.getByRole('textbox'), {
       target: { value: VALID_ADDRESS },
     });
-    fireEvent.click(screen.getByRole('button', { name: /scout/i }));
+    fireEvent.click(screen.getByRole('button', { name: /search/i }));
     expect(onSubmit).toHaveBeenCalledOnce();
     expect(onSubmit).toHaveBeenCalledWith(VALID_ADDRESS);
   });
@@ -40,7 +40,7 @@ describe('AddressInput', () => {
     fireEvent.change(screen.getByRole('textbox'), {
       target: { value: 'not-an-address' },
     });
-    fireEvent.click(screen.getByRole('button', { name: /scout/i }));
+    fireEvent.click(screen.getByRole('button', { name: /search/i }));
     expect(screen.getByText('Invalid Ethereum address')).toBeInTheDocument();
   });
 
@@ -58,14 +58,14 @@ describe('AddressInput', () => {
     fireEvent.change(screen.getByRole('textbox'), {
       target: { value: '0xinvalid' },
     });
-    fireEvent.click(screen.getByRole('button', { name: /scout/i }));
+    fireEvent.click(screen.getByRole('button', { name: /search/i }));
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it('clears error message when user starts typing', () => {
     render(<AddressInput onSubmit={() => {}} />);
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'bad' } });
-    fireEvent.click(screen.getByRole('button', { name: /scout/i }));
+    fireEvent.click(screen.getByRole('button', { name: /search/i }));
     expect(screen.getByText('Invalid Ethereum address')).toBeInTheDocument();
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'b' } });
     expect(
@@ -76,13 +76,13 @@ describe('AddressInput', () => {
   it('disables both input and button when disabled prop is true', () => {
     render(<AddressInput onSubmit={() => {}} disabled />);
     expect(screen.getByRole('textbox')).toBeDisabled();
-    expect(screen.getByRole('button', { name: /scout/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /search/i })).toBeDisabled();
   });
 
   it('error is accessible via aria-describedby', () => {
     render(<AddressInput onSubmit={() => {}} />);
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'bad' } });
-    fireEvent.click(screen.getByRole('button', { name: /scout/i }));
+    fireEvent.click(screen.getByRole('button', { name: /search/i }));
     const input = screen.getByRole('textbox');
     expect(input).toHaveAttribute('aria-invalid', 'true');
     expect(input).toHaveAttribute('aria-describedby', 'address-error');

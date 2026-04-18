@@ -12,7 +12,6 @@ const mockCreate = vi.fn().mockResolvedValue({
       text: JSON.stringify({
         trustLevel: 'High',
         headline: 'Active contributor',
-        tags: ['Veteran'],
       }),
     },
   ],
@@ -93,7 +92,6 @@ describe('GET /api/scout', () => {
     const body = await res.json();
     expect(body).toHaveProperty('trustLevel');
     expect(body).toHaveProperty('headline');
-    expect(body).toHaveProperty('tags');
     expect(body).toHaveProperty('stats');
   });
 
@@ -117,15 +115,6 @@ describe('GET /api/scout', () => {
     expect(stats).toHaveProperty('usdmVolume');
     expect(stats).toHaveProperty('lastActive');
     expect(stats).toHaveProperty('walletAge');
-  });
-
-  it('fallback tags is an array', async () => {
-    const req = new Request(
-      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
-    );
-    const res = await GET(req);
-    const body = await res.json();
-    expect(Array.isArray(body.tags)).toBe(true);
   });
 
   it('calls Anthropic SDK when ANTHROPIC_API_KEY is set', async () => {
@@ -200,45 +189,6 @@ describe('GET /api/scout', () => {
     const res = await GET(req);
     const body = await res.json();
     expect(body.trustLevel).toBe('High');
-  });
-
-  it('includes Tipper tag when tipsReceived > 0', async () => {
-    vi.mocked(fetchTips).mockImplementation(async (_addr, type) =>
-      type === 'received' ? [makeTipEvent()] : [],
-    );
-
-    const req = new Request(
-      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
-    );
-    const res = await GET(req);
-    const body = await res.json();
-    expect(body.tags).toContain('Tipper');
-  });
-
-  it('does not include Tipper tag when no tips received', async () => {
-    const req = new Request(
-      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
-    );
-    const res = await GET(req);
-    const body = await res.json();
-    expect(body.tags).not.toContain('Tipper');
-  });
-
-  it('includes Generous tag when tipsSent >= 5', async () => {
-    vi.mocked(fetchTips).mockImplementation(async (_addr, type) =>
-      type === 'sent'
-        ? Array.from({ length: 5 }, () =>
-            makeTipEvent({ to: VALID_ADDRESS as `0x${string}` }),
-          )
-        : [],
-    );
-
-    const req = new Request(
-      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
-    );
-    const res = await GET(req);
-    const body = await res.json();
-    expect(body.tags).toContain('Generous');
   });
 
   it('Claude path preserves server-computed auraStats', async () => {

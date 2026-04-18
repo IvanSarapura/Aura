@@ -34,7 +34,7 @@ function formatDate(iso: string | null): string {
 }
 
 export function ImpactCard({ result, address }: Props) {
-  const { trustLevel, headline, tags, isBuilder, stats, auraStats } = result;
+  const { trustLevel, headline, isBuilder, stats, auraStats } = result;
   const hasAuraActivity = auraStats && auraStats.tipsReceived > 0;
 
   return (
@@ -78,15 +78,6 @@ export function ImpactCard({ result, address }: Props) {
 
       {/* Headline */}
       <p className={styles.headline}>{headline}</p>
-
-      {/* Tags */}
-      <ul className={styles.tags} aria-label="Wallet tags">
-        {tags.map((tag) => (
-          <li key={tag} className={styles.tag}>
-            {tag}
-          </li>
-        ))}
-      </ul>
 
       {/* Unified stats grid */}
       <dl className={styles.stats}>

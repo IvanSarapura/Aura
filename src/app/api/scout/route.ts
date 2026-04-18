@@ -214,23 +214,9 @@ function buildFallbackResult(
     Low: 'New or low-activity wallet — start tipping to build reputation',
   };
 
-  const tags: string[] = [
-    trustLevel === 'High'
-      ? 'Veteran'
-      : trustLevel === 'Medium'
-        ? 'Active'
-        : 'Newcomer',
-  ];
-
-  if (parseFloat(stats.usdmVolume) > 0) tags.push('USDm User');
-  if (auraActive) tags.push('Tipper');
-  if (isBuilder) tags.push('Builder');
-  if (auraStats && auraStats.tipsSent >= 5) tags.push('Generous');
-
   return {
     trustLevel,
     headline: headlines[trustLevel],
-    tags,
     isBuilder,
     stats,
     auraStats,
@@ -261,8 +247,7 @@ async function analyzeWithClaude(
 Analyze this wallet and return a JSON object with EXACTLY this shape:
 {
   "trustLevel": "Low" | "Medium" | "High",
-  "headline": "<one sentence, max 80 chars>",
-  "tags": ["<tag1>", "<tag2>", "<tag3>"]
+  "headline": "<one sentence, max 80 chars>"
 }
 
 Wallet: ${address}
@@ -278,10 +263,7 @@ Rules:
 - trustLevel High: txCount ≥ 50, wallet age ≥ 180 days, volume ≥ $100 OR tipsReceived ≥ 10
 - trustLevel Medium: txCount ≥ 10, wallet age ≥ 30 days OR tipsReceived ≥ 3
 - trustLevel Low: everything else
-- If isBuilder is true, always include "Builder" in tags
-- If tipsReceived > 0, include "Tipper" in tags
-- tags should reflect activity (e.g. "Veteran", "DeFi User", "Early Adopter", "Regular Tipper", "Builder")
-- headline must be encouraging and factual
+- headline must be encouraging and factual, max 80 chars
 
 Return ONLY valid JSON. No markdown, no explanation.`;
 

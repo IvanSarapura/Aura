@@ -8,7 +8,6 @@ const ADDRESS = '0xABCDEF1234567890ABCDEF1234567890ABCDEF12';
 const BASE_RESULT: ScoutResult = {
   trustLevel: 'High',
   headline: 'Active contributor with strong on-chain history',
-  tags: ['Veteran', 'DeFi User'],
   isBuilder: false,
   stats: {
     txCount: 150,
@@ -41,12 +40,6 @@ describe('ImpactCard', () => {
   it('renders headline text', () => {
     render(<ImpactCard result={BASE_RESULT} address={ADDRESS} />);
     expect(screen.getByText(BASE_RESULT.headline)).toBeInTheDocument();
-  });
-
-  it('renders all tags', () => {
-    render(<ImpactCard result={BASE_RESULT} address={ADDRESS} />);
-    expect(screen.getByText('Veteran')).toBeInTheDocument();
-    expect(screen.getByText('DeFi User')).toBeInTheDocument();
   });
 
   it('renders tx count and usdm volume stats', () => {
