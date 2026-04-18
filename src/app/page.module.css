@@ -21,9 +21,8 @@
 .hero {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 1.25rem;
-  text-align: center;
   width: 100%;
   max-width: var(--max-width);
   flex: 1;
@@ -33,8 +32,8 @@
 }
 
 .inputWrapper {
-  width: 100%;
-  margin-top: 0.75rem;
+  /* stretch from align-items on hero handles width — no explicit 100% needed */
+  min-width: 0;
 }
 
 .title {
@@ -43,6 +42,8 @@
   font-weight: var(--font-wordmark-weight);
   letter-spacing: var(--font-wordmark-letter-spacing);
   line-height: 1;
+  text-align: center;
+  align-self: center;
   background: linear-gradient(
     135deg,
     var(--color-celo-green) 20%,
@@ -59,6 +60,8 @@
   font-family: var(--font-mono);
   font-size: 0.875rem;
   letter-spacing: 0.01em;
+  text-align: center;
+  align-self: center;
 }
 
 .network {
@@ -72,6 +75,7 @@
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--color-surface) 60%, transparent);
   backdrop-filter: blur(8px);
+  align-self: center;
 }
 
 .dot {
@@ -91,6 +95,56 @@
   50% {
     box-shadow: 0 0 0 5px transparent;
   }
+}
+
+/* ── "View your Aura profile" button — mirrors SelfProfileBanner ── */
+
+.profileBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: color-mix(in srgb, var(--color-celo-green) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-celo-green) 22%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--color-celo-green);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 0 16px
+    color-mix(in srgb, var(--color-celo-green) 6%, transparent);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
+  text-align: left;
+}
+
+.profileBtn:hover {
+  background: color-mix(in srgb, var(--color-celo-green) 11%, transparent);
+  border-color: color-mix(in srgb, var(--color-celo-green) 34%, transparent);
+  transform: translateY(-1px);
+}
+
+.profileBtn:active {
+  transform: scale(0.99);
+}
+
+.profileBtnIcon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.profileBtnArrow {
+  margin-left: auto;
+  font-size: 1rem;
+  opacity: 0.7;
+  transition: transform var(--transition-fast);
+}
+
+.profileBtn:hover .profileBtnArrow {
+  transform: translateX(3px);
 }
 
 .badge {

@@ -69,3 +69,30 @@
   height: 1rem;
   border-radius: 50%;
 }
+
+/* ── Network state variants ── */
+
+.chainBtnMainnet {
+  border-color: color-mix(in srgb, var(--color-celo-green) 30%, transparent);
+}
+
+.chainBtnTestnet {
+  border-color: color-mix(in srgb, var(--color-celo-gold) 30%, transparent);
+}
+
+.networkDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.networkDotMainnet {
+  background: var(--color-celo-green);
+  box-shadow: 0 0 6px var(--color-celo-green);
+}
+
+.networkDotTestnet {
+  background: var(--color-celo-gold);
+  box-shadow: 0 0 6px var(--color-celo-gold);
+}

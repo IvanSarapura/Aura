@@ -1,6 +1,7 @@
 'use client';
 
 import { ConnectButton as RainbowConnectButton } from '@rainbow-me/rainbowkit';
+import { celo, celoSepolia } from 'viem/chains';
 import styles from './ConnectButton.module.css';
 
 export function ConnectButton() {
@@ -15,6 +16,8 @@ export function ConnectButton() {
         mounted,
       }) => {
         const connected = mounted && account && chain;
+        const chainLabel =
+          chain?.id === celoSepolia.id ? 'Celo Sepolia' : (chain?.name ?? '');
 
         return (
           <div
@@ -43,10 +46,15 @@ export function ConnectButton() {
             ) : (
               <div className={styles.accountRow}>
                 <button
-                  className={styles.chainBtn}
+                  className={`${styles.chainBtn} ${chain.id === celo.id ? styles.chainBtnMainnet : styles.chainBtnTestnet}`}
                   onClick={openChainModal}
                   type="button"
+                  title="Switch network"
                 >
+                  <span
+                    className={`${styles.networkDot} ${chain.id === celo.id ? styles.networkDotMainnet : styles.networkDotTestnet}`}
+                    aria-hidden="true"
+                  />
                   {chain.hasIcon && chain.iconUrl && (
                     // eslint-disable-next-line @next/next/no-img-element -- RainbowKit chain icons have unpredictable domains; next/image requires allowlisting
                     <img
@@ -55,7 +63,7 @@ export function ConnectButton() {
                       className={styles.chainIcon}
                     />
                   )}
-                  {chain.name}
+                  {chainLabel}
                 </button>
                 <button
                   className={styles.accountBtn}

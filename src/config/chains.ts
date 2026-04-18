@@ -4,13 +4,18 @@ import { celo, celoSepolia } from 'viem/chains';
 export const TESTNET_CHAINS = [celoSepolia] as const;
 export const MAINNET_CHAINS = [celo] as const;
 
+// Both chains registered so RainbowKit's chain modal offers switching.
+// The primary chain (first in array) matches the active profile.
+export const ALL_CHAINS = [celo, celoSepolia] as const;
+export const ALL_CHAINS_TESTNET_FIRST = [celoSepolia, celo] as const;
+
 export function getActiveChains(chainProfile?: 'testnet' | 'mainnet') {
   const profile =
     chainProfile ??
     (process.env.NEXT_PUBLIC_CHAIN_PROFILE === 'mainnet'
       ? 'mainnet'
       : 'testnet');
-  return profile === 'mainnet' ? MAINNET_CHAINS : TESTNET_CHAINS;
+  return profile === 'mainnet' ? ALL_CHAINS : ALL_CHAINS_TESTNET_FIRST;
 }
 
 export function getExplorerUrl(chainId: number, txHash: string): string {

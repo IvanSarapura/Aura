@@ -3,12 +3,14 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Address } from 'viem';
+import { useAccount } from 'wagmi';
 import { ConnectButton } from '@/components/ConnectButton/ConnectButton';
 import { AddressInput } from '@/components/AddressInput/AddressInput';
 import styles from './page.module.css';
 
 export default function Home() {
   const router = useRouter();
+  const { address } = useAccount();
   const profile = process.env.NEXT_PUBLIC_CHAIN_PROFILE ?? 'testnet';
   const network = profile === 'mainnet' ? 'Celo Mainnet' : 'Celo Sepolia';
 
@@ -27,7 +29,7 @@ export default function Home() {
       <div className={styles.hero}>
         <h1 className={styles.title}>✦Aura</h1>
         <p className={styles.subtitle}>
-          Wallet reputation + micro-payments on Celo
+          Wallet reputation &amp; micro-payments
         </p>
 
         <div className={styles.network}>
@@ -38,6 +40,22 @@ export default function Home() {
         <div className={styles.inputWrapper}>
           <AddressInput onSubmit={handleAddress} />
         </div>
+
+        {address && (
+          <button
+            className={styles.profileBtn}
+            onClick={() => router.push(`/${address}`)}
+            type="button"
+          >
+            <span className={styles.profileBtnIcon} aria-hidden>
+              ✦
+            </span>
+            View your Aura profile
+            <span className={styles.profileBtnArrow} aria-hidden>
+              →
+            </span>
+          </button>
+        )}
       </div>
     </main>
   );
