@@ -55,11 +55,24 @@ export async function fetchTipsOnchain(
 ): Promise<TipEvent[]> {
   const client = chainId === celo.id ? MAINNET_CLIENT : TESTNET_CLIENT;
 
+  // Use contract deployment block if configured — avoids RPC block-range limits.
+  // Fallback: scan last 500k blocks (~28 days on Celo Sepolia at 5s/block).
+  const deployBlockEnv =
+    chainId === celo.id
+      ? process.env.NEXT_PUBLIC_AURA_TIP_DEPLOY_BLOCK_MAINNET
+      : process.env.NEXT_PUBLIC_AURA_TIP_DEPLOY_BLOCK_TESTNET;
+
+  const fromBlock = deployBlockEnv
+    ? BigInt(deployBlockEnv)
+    : await client
+        .getBlockNumber()
+        .then((n) => (n > 500_000n ? n - 500_000n : 0n));
+
   const logs = await client.getLogs({
     address: contractAddress,
     event: TIP_SENT_EVENT,
     args: type === 'received' ? { to: address } : { from: address },
-    fromBlock: 0n,
+    fromBlock,
     toBlock: 'latest',
   });
 

@@ -32,7 +32,8 @@ export async function GET(request: Request) {
       nextPage: hasMore ? page + 1 : null,
       total: all.length,
     });
-  } catch {
+  } catch (err) {
+    console.error('[tips]', err);
     return NextResponse.json(
       {
         error: 'fetch_failed',

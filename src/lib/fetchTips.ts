@@ -59,6 +59,8 @@ async function fetchBlockscoutTips(
   const url = `${base}/addresses/${AURA_TIP_ADDRESS}/logs?topic=${TIP_SENT_TOPIC0}&page_size=50`;
 
   const res = await fetch(url, { next: { revalidate: 120 } });
+  // 404/422 = contract not indexed yet or unknown address — not an error
+  if (res.status === 404 || res.status === 422) return [];
   if (!res.ok) throw new Error(`Blockscout error: ${res.status}`);
 
   const json = await res.json();
@@ -85,8 +87,7 @@ export async function fetchTips(
     return fetchCeloscanTips(addressToTopic(address), type);
   }
 
-  // Testnet: viem getLogs with server-side topic filtering (correct)
-  // Falls back to Blockscout client-side filter if RPC is unavailable
+  // Testnet: viem getLogs (primary) → Blockscout (fallback) → empty array
   try {
     return await fetchTipsOnchain(
       address as Address,
@@ -94,7 +95,19 @@ export async function fetchTips(
       AURA_TIP_ADDRESS as Address,
       CHAIN_ID,
     );
-  } catch {
-    return fetchBlockscoutTips(address, type);
+  } catch (primaryErr) {
+    console.warn(
+      '[fetchTips] onchain RPC failed, trying Blockscout:',
+      primaryErr,
+    );
+    try {
+      return await fetchBlockscoutTips(address, type);
+    } catch (fallbackErr) {
+      console.error(
+        '[fetchTips] Blockscout fallback also failed:',
+        fallbackErr,
+      );
+      return [];
+    }
   }
 }
