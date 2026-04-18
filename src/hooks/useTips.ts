@@ -1,19 +1,29 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import type { Address } from 'viem';
 import type { TipEvent } from '@/lib/tipEvents';
 
 export type { TipEvent };
 
+interface TipsPage {
+  tips: TipEvent[];
+  hasMore: boolean;
+  nextPage: number | null;
+  total: number;
+}
+
 export function useTips(
   address: Address,
   type: 'received' | 'sent' = 'received',
 ) {
-  return useQuery<{ tips: TipEvent[] }, Error>({
+  return useInfiniteQuery<TipsPage, Error>({
     queryKey: ['tips', address, type],
-    queryFn: async () => {
-      const res = await fetch(`/api/tips?address=${address}&type=${type}`);
+    queryFn: async ({ pageParam }) => {
+      const page = pageParam as number;
+      const res = await fetch(
+        `/api/tips?address=${address}&type=${type}&page=${page}`,
+      );
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(
@@ -22,6 +32,8 @@ export function useTips(
       }
       return res.json();
     },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
     staleTime: 2 * 60 * 1000,
     retry: 1,
   });

@@ -29,7 +29,20 @@ async function fetchBlockscoutStats(address: string): Promise<BlockscoutStats> {
     fetch(`${base}/addresses/${address}`),
   ]);
 
-  const txData = txsRes.ok ? await txsRes.json() : { items: [] };
+  // 422 = address unknown to Blockscout (new wallet, no activity) — treat as empty
+  if (txsRes.status === 422 || (addrRes && addrRes.status === 422)) {
+    return {
+      txCount: 0,
+      usdmVolume: '0.00',
+      lastActive: null,
+      walletAge: null,
+    };
+  }
+  if (!txsRes.ok) throw new Error(`Blockscout txs error: ${txsRes.status}`);
+  if (addrRes && !addrRes.ok)
+    throw new Error(`Blockscout addr error: ${addrRes.status}`);
+
+  const txData = await txsRes.json();
   const transferData =
     transfersRes && transfersRes.ok ? await transfersRes.json() : { items: [] };
   const addrData = addrRes.ok ? await addrRes.json() : {};
@@ -65,7 +78,9 @@ async function fetchCeloscanStats(address: string): Promise<BlockscoutStats> {
     ),
   ]);
 
-  const txData = txsRes.ok ? await txsRes.json() : { result: [] };
+  if (!txsRes.ok) throw new Error(`Celoscan txs error: ${txsRes.status}`);
+
+  const txData = await txsRes.json();
   const transferData = transfersRes.ok
     ? await transfersRes.json()
     : { result: [] };

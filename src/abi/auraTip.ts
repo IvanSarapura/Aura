@@ -34,6 +34,20 @@ export const auraTipAbi = [
   },
   {
     type: 'function',
+    name: 'tipsReceivedCount',
+    stateMutability: 'view',
+    inputs: [{ name: 'account', type: 'address', internalType: 'address' }],
+    outputs: [{ name: '', type: 'uint256', internalType: 'uint256' }],
+  },
+  {
+    type: 'function',
+    name: 'tipsSentCount',
+    stateMutability: 'view',
+    inputs: [{ name: 'account', type: 'address', internalType: 'address' }],
+    outputs: [{ name: '', type: 'uint256', internalType: 'uint256' }],
+  },
+  {
+    type: 'function',
     name: 'tip',
     stateMutability: 'nonpayable',
     inputs: [

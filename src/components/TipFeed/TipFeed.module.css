@@ -191,9 +191,40 @@
   max-width: 22ch;
 }
 
+/* ── Load more ── */
+
+.loadMore {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  background: color-mix(in srgb, var(--color-celo-green) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-celo-green) 22%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--color-celo-green);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.loadMore:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-celo-green) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-celo-green) 35%, transparent);
+}
+
+.loadMore:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ── Error state ── */
 
 .errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
   padding: 0.875rem 1rem;
   background: color-mix(in srgb, var(--color-error) 7%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-error) 18%, transparent);
@@ -201,4 +232,20 @@
   font-size: 0.875rem;
   color: var(--color-text-muted);
   text-align: center;
+}
+
+.retryBtn {
+  padding: 0.35rem 1rem;
+  background: color-mix(in srgb, var(--color-error) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-error) 28%, transparent);
+  border-radius: 999px;
+  color: var(--color-error);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.retryBtn:hover {
+  background: color-mix(in srgb, var(--color-error) 20%, transparent);
 }

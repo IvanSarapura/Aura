@@ -66,8 +66,18 @@ function SkeletonList() {
 }
 
 export function TipFeed({ address, type = 'received', title }: Props) {
-  const { data, isPending, isError } = useTips(address, type);
-  const tips = data?.tips ?? [];
+  const {
+    data,
+    isPending,
+    isError,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useTips(address, type);
+
+  const tips = data?.pages.flatMap((p) => p.tips) ?? [];
+  const total = data?.pages[0]?.total ?? 0;
 
   const sectionTitle =
     title ?? (type === 'received' ? 'Tips received' : 'Tips sent');
@@ -76,9 +86,9 @@ export function TipFeed({ address, type = 'received', title }: Props) {
     <section className={styles.section} aria-label={sectionTitle}>
       <div className={styles.header}>
         <h2 className={styles.title}>{sectionTitle}</h2>
-        {!isPending && !isError && tips.length > 0 && (
-          <span className={styles.count} aria-label={`${tips.length} tips`}>
-            {tips.length}
+        {!isPending && !isError && total > 0 && (
+          <span className={styles.count} aria-label={`${total} tips`}>
+            {total}
           </span>
         )}
       </div>
@@ -86,9 +96,12 @@ export function TipFeed({ address, type = 'received', title }: Props) {
       {isPending && <SkeletonList />}
 
       {isError && (
-        <p className={styles.errorState}>
-          Could not load tips. Check back later.
-        </p>
+        <div className={styles.errorState}>
+          <p>Could not load tips — network or indexer unavailable.</p>
+          <button className={styles.retryBtn} onClick={() => void refetch()}>
+            Retry
+          </button>
+        </div>
       )}
 
       {!isPending && !isError && tips.length === 0 && (
@@ -105,11 +118,28 @@ export function TipFeed({ address, type = 'received', title }: Props) {
       )}
 
       {!isPending && !isError && tips.length > 0 && (
-        <ul className={styles.list} aria-label={`${sectionTitle} list`}>
-          {tips.map((tip) => (
-            <TipItem key={`${tip.txHash}-${tip.from}`} tip={tip} type={type} />
-          ))}
-        </ul>
+        <>
+          <ul className={styles.list} aria-label={`${sectionTitle} list`}>
+            {tips.map((tip) => (
+              <TipItem
+                key={`${tip.txHash}-${tip.from}`}
+                tip={tip}
+                type={type}
+              />
+            ))}
+          </ul>
+
+          {hasNextPage && (
+            <button
+              className={styles.loadMore}
+              onClick={() => void fetchNextPage()}
+              disabled={isFetchingNextPage}
+              aria-label="Load more tips"
+            >
+              {isFetchingNextPage ? 'Loading…' : 'Load more'}
+            </button>
+          )}
+        </>
       )}
     </section>
   );

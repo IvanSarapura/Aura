@@ -1,4 +1,4 @@
-import { isAddress } from 'viem';
+import { isAddress, type Address } from 'viem';
 import {
   TIP_SENT_TOPIC0,
   addressToTopic,
@@ -9,6 +9,7 @@ import {
 import type { SupportedChainId } from '@/config/contracts';
 import { CONTRACTS } from '@/config/contracts';
 import { celo, celoSepolia } from 'viem/chains';
+import { fetchTipsOnchain } from '@/lib/getOnchainLogs';
 
 const CHAIN_PROFILE = process.env.NEXT_PUBLIC_CHAIN_PROFILE ?? 'testnet';
 const IS_MAINNET = CHAIN_PROFILE === 'mainnet';
@@ -43,7 +44,7 @@ async function fetchCeloscanTips(
   url.searchParams.set('apikey', apiKey);
 
   const res = await fetch(url.toString(), { next: { revalidate: 120 } });
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error(`Celoscan error: ${res.status}`);
 
   const json = await res.json();
   const logs = Array.isArray(json.result) ? json.result : [];
@@ -58,7 +59,7 @@ async function fetchBlockscoutTips(
   const url = `${base}/addresses/${AURA_TIP_ADDRESS}/logs?topic=${TIP_SENT_TOPIC0}&page_size=50`;
 
   const res = await fetch(url, { next: { revalidate: 120 } });
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error(`Blockscout error: ${res.status}`);
 
   const json = await res.json();
   const logs = Array.isArray(json.items) ? json.items : [];
@@ -83,5 +84,17 @@ export async function fetchTips(
   if (IS_MAINNET) {
     return fetchCeloscanTips(addressToTopic(address), type);
   }
-  return fetchBlockscoutTips(address, type);
+
+  // Testnet: viem getLogs with server-side topic filtering (correct)
+  // Falls back to Blockscout client-side filter if RPC is unavailable
+  try {
+    return await fetchTipsOnchain(
+      address as Address,
+      type,
+      AURA_TIP_ADDRESS as Address,
+      CHAIN_ID,
+    );
+  } catch {
+    return fetchBlockscoutTips(address, type);
+  }
 }
