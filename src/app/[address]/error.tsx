@@ -19,7 +19,7 @@ export default function AddressError({
     <main className={styles.main}>
       <header className={styles.topbar}>
         <Link href="/" className={styles.logo}>
-          Aura
+          ✦ Aura
         </Link>
       </header>
       <div className={styles.errorState}>

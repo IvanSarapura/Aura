@@ -118,30 +118,6 @@ describe('ImpactCard', () => {
     expect(screen.queryByText('No Aura activity yet')).not.toBeInTheDocument();
   });
 
-  it('renders top categories when present', () => {
-    render(
-      <ImpactCard
-        result={{ ...BASE_RESULT, auraStats: AURA_STATS }}
-        address={ADDRESS}
-      />,
-    );
-    expect(screen.getByText('design')).toBeInTheDocument();
-    expect(screen.getByText('code')).toBeInTheDocument();
-  });
-
-  it('does not render categories section when topCategories is empty', () => {
-    render(
-      <ImpactCard
-        result={{
-          ...BASE_RESULT,
-          auraStats: { ...AURA_STATS, topCategories: [] },
-        }}
-        address={ADDRESS}
-      />,
-    );
-    expect(screen.queryByText('Top categories')).not.toBeInTheDocument();
-  });
-
   it('renders — for null lastActive and walletAge', () => {
     render(
       <ImpactCard

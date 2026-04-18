@@ -49,8 +49,9 @@
   --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Typography */
-  --font-mono: var(--font-geist-mono), 'Courier New', monospace;
-  --font-sans: var(--font-geist-sans), Arial, sans-serif;
+  --font-display: var(--font-space-grotesk), 'Georgia', serif;
+  --font-sans: var(--font-inter), Arial, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), 'Courier New', monospace;
 
   /* Layout */
   --max-width: 430px;
@@ -99,6 +100,15 @@ body {
 }
 
 /* ─── Typography ─────────────────────────────────────────────────────────── */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
 a {
   color: var(--color-celo-green);
   text-decoration: none;

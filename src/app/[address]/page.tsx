@@ -27,7 +27,7 @@ export default async function AddressPage({ params }: Props) {
     <main className={styles.main}>
       <header className={styles.topbar}>
         <Link href="/" className={styles.logo}>
-          Aura
+          ✦ Aura
         </Link>
         <ConnectButton />
       </header>

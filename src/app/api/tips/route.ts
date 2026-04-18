@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { isAddress } from 'viem';
 import { fetchTips } from '@/lib/fetchTips';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 3;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

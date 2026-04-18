@@ -11,8 +11,9 @@
 }
 
 .addressTitle {
+  font-family: var(--font-display);
   font-size: 1.875rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1.1;
   background: linear-gradient(

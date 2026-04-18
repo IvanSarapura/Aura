@@ -141,20 +141,6 @@ export function ImpactCard({ result, address }: Props) {
           </>
         )}
       </dl>
-
-      {/* Top categories */}
-      {auraStats && auraStats.topCategories.length > 0 && (
-        <div className={styles.categories}>
-          <span className={styles.categoriesLabel}>Top categories</span>
-          <ul className={styles.categoryList} aria-label="Top tip categories">
-            {auraStats.topCategories.map((cat) => (
-              <li key={cat} className={styles.category}>
-                {cat}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </article>
   );
 }
