@@ -103,7 +103,7 @@ export function ImpactCard({ result, address }: Props) {
           <dd>{formatDate(stats.lastActive)}</dd>
         </div>
         <div className={styles.stat}>
-          <dt className={styles.statLabel}>Vol. Transferred</dt>
+          <dt className={styles.statLabel}>Vol. Sent</dt>
           <dd>${stats.usdmVolume}</dd>
         </div>
 

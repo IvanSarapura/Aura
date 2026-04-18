@@ -23,7 +23,7 @@ async function fetchBlockscoutStats(address: string): Promise<BlockscoutStats> {
     fetch(`${base}/addresses/${address}/transactions`),
     usdmAddress
       ? fetch(
-          `${base}/addresses/${address}/token-transfers?token=${usdmAddress}`,
+          `${base}/addresses/${address}/token-transfers?token=${usdmAddress}&filter=from`,
         )
       : Promise.resolve(null),
     fetch(`${base}/addresses/${address}`),
