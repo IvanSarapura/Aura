@@ -15,8 +15,9 @@
   min-height: 12rem;
 }
 
+/* ✦ — decorative; “Aura” uses --font-wordmark like hero / address header */
 .symbol {
-  font-size: 2.75rem;
+  font-size: clamp(3.25rem, 8vw, 4.25rem);
   line-height: 1;
   background: linear-gradient(
     135deg,
@@ -32,10 +33,11 @@
 }
 
 .label {
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: -0.04em;
+  font-family: var(--font-wordmark);
+  font-size: clamp(1.35rem, 4vw, 1.65rem);
+  font-weight: var(--font-wordmark-weight);
+  letter-spacing: var(--font-wordmark-letter-spacing);
+  line-height: 1;
   background: linear-gradient(
     135deg,
     var(--color-celo-green) 20%,
@@ -44,8 +46,8 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  opacity: 0.85;
   user-select: none;
+  animation: auraLabelBlink 1.85s ease-in-out infinite;
 }
 
 @keyframes auraSpin {
@@ -57,8 +59,23 @@
   }
 }
 
+@keyframes auraLabelBlink {
+  0%,
+  100% {
+    opacity: 0.42;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .symbol {
     animation: none;
+  }
+
+  .label {
+    animation: none;
+    opacity: 0.88;
   }
 }
