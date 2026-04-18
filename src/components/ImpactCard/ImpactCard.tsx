@@ -109,7 +109,8 @@ export function ImpactCard({ result, address }: Props) {
 
         {auraStats && (
           <>
-            <div className={`${styles.stat} ${styles.statDivider}`}>
+            <div className={styles.statSeparator} aria-hidden="true" />
+            <div className={styles.stat}>
               <dt className={`${styles.statLabel} ${styles.auraLabel}`}>
                 Tips Received
               </dt>

@@ -20,10 +20,10 @@ async function fetchBlockscoutStats(address: string): Promise<BlockscoutStats> {
   const usdmAddress = process.env.NEXT_PUBLIC_USDM_ADDRESS_TESTNET ?? '';
 
   const [txsRes, transfersRes, addrRes] = await Promise.all([
-    fetch(`${base}/addresses/${address}/transactions?limit=50`),
+    fetch(`${base}/addresses/${address}/transactions`),
     usdmAddress
       ? fetch(
-          `${base}/addresses/${address}/token-transfers?token=${usdmAddress}&limit=50`,
+          `${base}/addresses/${address}/token-transfers?token=${usdmAddress}`,
         )
       : Promise.resolve(null),
     fetch(`${base}/addresses/${address}`),
