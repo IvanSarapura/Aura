@@ -67,11 +67,11 @@ export default function RootLayout({
           chainProfile={env.chainProfile}
         >
           {children}
+          <footer className="site-footer">
+            <span>✦ Aura &mdash; Powered by MiniPay &amp; Celo</span>
+            <span>&copy; 2026 All rights reserved</span>
+          </footer>
         </ClientWeb3Provider>
-        <footer className="site-footer">
-          <span>✦ Aura &mdash; Powered by MiniPay &amp; Celo</span>
-          <span>&copy; 2026 All rights reserved</span>
-        </footer>
       </body>
     </html>
   );

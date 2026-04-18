@@ -1,9 +1,5 @@
-import styles from './loading.module.css';
+import { AuraLoader } from '@/components/AuraLoader/AuraLoader';
 
 export default function Loading() {
-  return (
-    <div className={styles.container}>
-      <div className={styles.spinner} aria-label="Loading" />
-    </div>
-  );
+  return <AuraLoader />;
 }

@@ -1,0 +1,64 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.container.fullpage {
+  min-height: 100dvh;
+}
+
+.container.inline {
+  min-height: 12rem;
+}
+
+.symbol {
+  font-size: 2.75rem;
+  line-height: 1;
+  background: linear-gradient(
+    135deg,
+    var(--color-celo-green) 20%,
+    var(--color-celo-gold) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: auraSpin 1.4s linear infinite;
+  user-select: none;
+  display: inline-block;
+}
+
+.label {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  background: linear-gradient(
+    135deg,
+    var(--color-celo-green) 20%,
+    var(--color-celo-gold) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  opacity: 0.85;
+  user-select: none;
+}
+
+@keyframes auraSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .symbol {
+    animation: none;
+  }
+}

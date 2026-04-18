@@ -6,6 +6,7 @@ import { TipForm } from '@/components/TipForm/TipForm';
 import { PaymentLink } from '@/components/PaymentLink/PaymentLink';
 import { TipFeed } from '@/components/TipFeed/TipFeed';
 import { SelfProfileBanner } from '@/components/SelfProfileBanner/SelfProfileBanner';
+import { AuraLoader } from '@/components/AuraLoader/AuraLoader';
 import { useAccount } from 'wagmi';
 import type { Address } from 'viem';
 import { useAuraTipStats } from '@/hooks/useAuraTipStats';
@@ -24,11 +25,7 @@ function ProfileContent({ address, isOwnProfile }: ContentProps) {
   const { isConnected } = useAccount();
 
   if (isPending) {
-    return (
-      <div className={styles.loading} aria-busy="true">
-        Scouting wallet…
-      </div>
-    );
+    return <AuraLoader inline />;
   }
 
   if (isError || !data) {
