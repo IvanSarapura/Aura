@@ -68,6 +68,10 @@ export default function RootLayout({
         >
           {children}
         </ClientWeb3Provider>
+        <footer className="site-footer">
+          <span>✦ Aura &mdash; Powered by MiniPay &amp; Celo</span>
+          <span>&copy; 2026 All rights reserved</span>
+        </footer>
       </body>
     </html>
   );

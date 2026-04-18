@@ -15,11 +15,13 @@ interface Props {
   address: Address;
 }
 
-function ProfileContent({ address }: Props) {
+interface ContentProps extends Props {
+  isOwnProfile: boolean;
+}
+
+function ProfileContent({ address, isOwnProfile }: ContentProps) {
   const { data, isPending, isError } = useScout(address);
-  const { address: myAddress, isConnected } = useAccount();
-  const isOwnProfile =
-    !!myAddress && myAddress.toLowerCase() === address.toLowerCase();
+  const { isConnected } = useAccount();
 
   if (isPending) {
     return (
@@ -41,8 +43,6 @@ function ProfileContent({ address }: Props) {
     <div className={styles.content}>
       <ImpactCard result={data} address={address} />
 
-      {isOwnProfile && <SelfProfileBanner address={address} />}
-
       <PaymentLink address={address} />
 
       <TipFeed address={address} type="received" />
@@ -51,16 +51,17 @@ function ProfileContent({ address }: Props) {
         <TipFeed address={address} type="sent" title="Tips you sent" />
       )}
 
-      {isConnected ? (
-        <section className={styles.tipSection}>
-          <h2 className={styles.tipHeading}>Send a tip</h2>
-          <TipForm recipient={address} trustLevel={data.trustLevel} />
-        </section>
-      ) : (
-        <p className={styles.connectPrompt}>
-          Connect your wallet to send a tip.
-        </p>
-      )}
+      {!isOwnProfile &&
+        (isConnected ? (
+          <section className={styles.tipSection}>
+            <h2 className={styles.tipHeading}>Send a tip</h2>
+            <TipForm recipient={address} trustLevel={data.trustLevel} />
+          </section>
+        ) : (
+          <p className={styles.connectPrompt}>
+            Connect your wallet to send a tip.
+          </p>
+        ))}
     </div>
   );
 }
@@ -68,6 +69,9 @@ function ProfileContent({ address }: Props) {
 export function ReceiverProfile({ address }: Props) {
   const { tipsReceivedCount, isPending: statsLoading } =
     useAuraTipStats(address);
+  const { address: myAddress } = useAccount();
+  const isOwnProfile =
+    !!myAddress && myAddress.toLowerCase() === address.toLowerCase();
 
   return (
     <div className={styles.wrapper}>
@@ -85,7 +89,10 @@ export function ReceiverProfile({ address }: Props) {
           </span>
         )}
       </header>
-      <ProfileContent address={address} />
+
+      {isOwnProfile && <SelfProfileBanner address={address} />}
+
+      <ProfileContent address={address} isOwnProfile={isOwnProfile} />
     </div>
   );
 }

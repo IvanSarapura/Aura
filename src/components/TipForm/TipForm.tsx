@@ -58,7 +58,7 @@ export function TipForm({ recipient, trustLevel }: Props) {
     formState: { errors },
   } = useForm<TipFormData>({
     resolver: zodResolver(tipSchema),
-    defaultValues: { amount: '', category: 'thanks', message: '' },
+    defaultValues: { amount: '', category: 'work', message: '' },
   });
 
   const amount = watch('amount');
@@ -161,18 +161,35 @@ export function TipForm({ recipient, trustLevel }: Props) {
         <label htmlFor="tip-category" className={styles.label}>
           Category
         </label>
-        <select
-          id="tip-category"
-          className={styles.select}
-          disabled={isWorking}
-          {...register('category')}
-        >
-          {TIP_CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c.charAt(0).toUpperCase() + c.slice(1)}
-            </option>
-          ))}
-        </select>
+        <div className={styles.selectWrapper}>
+          <select
+            id="tip-category"
+            className={styles.select}
+            disabled={isWorking}
+            {...register('category')}
+          >
+            {TIP_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c.charAt(0).toUpperCase() + c.slice(1)}
+              </option>
+            ))}
+          </select>
+          <svg
+            className={styles.selectChevron}
+            viewBox="0 0 12 12"
+            fill="none"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M2 4L6 8L10 4"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
       </div>
 
       {/* Message */}

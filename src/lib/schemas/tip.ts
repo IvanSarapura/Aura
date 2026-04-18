@@ -1,10 +1,13 @@
 import { z } from 'zod';
 
 export const TIP_CATEGORIES = [
+  'work',
   'support',
-  'thanks',
   'donation',
   'feedback',
+  'content',
+  'design',
+  'code',
   'other',
 ] as const;
 

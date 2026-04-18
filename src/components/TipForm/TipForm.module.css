@@ -29,10 +29,39 @@
   align-items: center;
 }
 
+/* ── Custom select wrapper with chevron ── */
+
+.selectWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.selectWrapper .select {
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+
+.selectChevron {
+  position: absolute;
+  right: 0.875rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+}
+
+.selectWrapper:focus-within .selectChevron {
+  color: var(--color-celo-green);
+}
+
 .input,
 .select,
 .textarea {
   width: 100%;
+  min-width: 0;
   padding: 0.75rem 1rem;
   min-height: 3rem;
   background: var(--color-surface-2);

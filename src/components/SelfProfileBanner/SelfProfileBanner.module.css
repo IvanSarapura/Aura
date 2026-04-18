@@ -75,8 +75,28 @@
   color: #c4a0ff;
   border: 1px solid color-mix(in srgb, #8a63d2 28%, transparent);
   text-decoration: none;
+  /* inherit btn base layout */
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  min-height: 2rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .btnFarcaster:hover {
+  opacity: 0.82;
+  transform: translateY(-1px);
   text-decoration: none;
+}
+
+.btnFarcaster:active {
+  transform: scale(0.98);
 }
