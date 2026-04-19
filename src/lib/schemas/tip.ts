@@ -18,7 +18,9 @@ export const tipSchema = z.object({
     .string()
     .min(1, 'Required')
     .refine((v) => !isNaN(Number(v)) && Number(v) > 0, 'Must be greater than 0')
-    .refine((v) => Number(v) <= 1000, 'Max 1000 per tip'),
+    // Cap is intentionally high to accommodate high-denomination stablecoins
+    // (NGNm, COPm, JPYm, etc.). Real balance enforcement comes from the ERC-20 contract.
+    .refine((v) => Number(v) <= 100_000_000, 'Amount exceeds maximum'),
   category: z.enum(TIP_CATEGORIES),
   message: z.string().max(280, 'Max 280 characters'),
 });
