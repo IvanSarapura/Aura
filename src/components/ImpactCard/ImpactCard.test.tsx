@@ -34,7 +34,7 @@ describe('ImpactCard', () => {
 
   it('renders truncated address', () => {
     render(<ImpactCard result={BASE_RESULT} address={ADDRESS} />);
-    expect(screen.getByText('0xABCD…EF12')).toBeInTheDocument();
+    expect(screen.getByText('0xABCD...EF12')).toBeInTheDocument();
   });
 
   it('renders headline text', () => {

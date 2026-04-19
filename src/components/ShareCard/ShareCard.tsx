@@ -3,6 +3,7 @@
 import type { TrustLevel } from '@/hooks/useScout';
 import { useAccount } from 'wagmi';
 import { getExplorerUrl } from '@/config/chains';
+import { formatTxHashDisplay } from '@/lib/formatTxHash';
 import styles from './ShareCard.module.css';
 
 interface Props {
@@ -27,7 +28,7 @@ export function ShareCard({
   onReset,
 }: Props) {
   const { chainId } = useAccount();
-  const short = `${recipient.slice(0, 6)}…${recipient.slice(-4)}`;
+  const short = formatTxHashDisplay(recipient);
   const trust = trustLevel ?? 'Medium';
   const emoji = TRUST_EMOJI[trust];
 
@@ -46,11 +47,11 @@ export function ShareCard({
   return (
     <div className={styles.card} role="status">
       <div className={styles.receipt}>
-        <p className={styles.brand} aria-label="Aura">
+        <p className={styles.brand} aria-label="Aura Ticket">
           <span className={styles.brandSymbol} aria-hidden="true">
             ✦
           </span>
-          <span className={styles.brandText}>Aura</span>
+          <span className={styles.brandText}>Aura Ticket</span>
         </p>
 
         <div className={styles.divider} />
@@ -81,8 +82,9 @@ export function ShareCard({
                   target="_blank"
                   rel="noreferrer"
                   className={styles.link}
+                  title={tipTxHash}
                 >
-                  {tipTxHash.slice(0, 10)}…
+                  {formatTxHashDisplay(tipTxHash)}
                 </a>
               </dd>
             </div>

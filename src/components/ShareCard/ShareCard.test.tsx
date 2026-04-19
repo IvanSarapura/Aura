@@ -17,7 +17,7 @@ describe('ShareCard', () => {
         onReset={() => {}}
       />,
     );
-    expect(screen.getByText('0x1234…7890')).toBeInTheDocument();
+    expect(screen.getByText('0x1234...7890')).toBeInTheDocument();
   });
 
   it('renders amount with USDm label', () => {
@@ -139,7 +139,7 @@ describe('ShareCard', () => {
     expect(decoded).toContain('Medium');
   });
 
-  it('renders Aura brand in receipt', () => {
+  it('renders Aura Ticket brand in receipt', () => {
     render(
       <ShareCard
         recipient={RECIPIENT}
@@ -147,6 +147,21 @@ describe('ShareCard', () => {
         onReset={() => {}}
       />,
     );
-    expect(screen.getByText('Aura')).toBeInTheDocument();
+    expect(screen.getByText('Aura Ticket')).toBeInTheDocument();
+  });
+
+  it('shows shortened tip tx hash with ellipsis and full hash in title', () => {
+    const tipTxHash =
+      '0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead';
+    render(
+      <ShareCard
+        recipient={RECIPIENT}
+        amountDisplay="1.00"
+        tipTxHash={tipTxHash}
+        onReset={() => {}}
+      />,
+    );
+    const link = screen.getByRole('link', { name: '0xdead...dead' });
+    expect(link).toHaveAttribute('title', tipTxHash);
   });
 });

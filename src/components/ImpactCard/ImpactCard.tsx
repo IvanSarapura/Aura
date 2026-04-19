@@ -1,6 +1,7 @@
 'use client';
 
 import type { ScoutResult, TrustLevel } from '@/hooks/useScout';
+import { formatTxHashDisplay } from '@/lib/formatTxHash';
 import styles from './ImpactCard.module.css';
 
 interface Props {
@@ -64,8 +65,8 @@ export function ImpactCard({ result, address }: Props) {
             </span>
           )}
         </div>
-        <p className={styles.address}>
-          {address.slice(0, 6)}…{address.slice(-4)}
+        <p className={styles.address} title={address}>
+          {formatTxHashDisplay(address)}
         </p>
       </header>
 

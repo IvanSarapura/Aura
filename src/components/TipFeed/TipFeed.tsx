@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { Address } from 'viem';
 import { useTips, type TipEvent } from '@/hooks/useTips';
+import { formatTxHashDisplay } from '@/lib/formatTxHash';
 import styles from './TipFeed.module.css';
 
 interface Props {
@@ -24,10 +25,6 @@ function formatDate(iso: string): string {
   }
 }
 
-function shortenAddress(addr: string): string {
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
-}
-
 function TipItem({ tip, type }: { tip: TipEvent; type: 'received' | 'sent' }) {
   const peer = type === 'received' ? tip.from : tip.to;
   const peerLabel = type === 'received' ? 'from' : 'to';
@@ -44,8 +41,8 @@ function TipItem({ tip, type }: { tip: TipEvent; type: 'received' | 'sent' }) {
       </div>
 
       <div className={styles.itemSub}>
-        <span className={styles.from}>
-          {peerLabel} {shortenAddress(peer)}
+        <span className={styles.from} title={peer}>
+          {peerLabel} {formatTxHashDisplay(peer)}
         </span>
         <span className={styles.category}>{tip.category}</span>
       </div>

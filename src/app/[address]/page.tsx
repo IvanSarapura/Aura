@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { isAddress } from 'viem';
+import { formatTxHashDisplay } from '@/lib/formatTxHash';
 import { notFound } from 'next/navigation';
 import type { Address } from 'viem';
 import { ConnectButton } from '@/components/ConnectButton/ConnectButton';
@@ -12,9 +13,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props) {
   const { address } = await params;
-  const short = isAddress(address)
-    ? `${address.slice(0, 6)}…${address.slice(-4)}`
-    : address;
+  const short = isAddress(address) ? formatTxHashDisplay(address) : address;
   return { title: `${short} — Aura` };
 }
 

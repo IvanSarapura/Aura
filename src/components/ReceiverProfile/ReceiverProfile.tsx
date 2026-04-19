@@ -9,6 +9,7 @@ import { SelfProfileBanner } from '@/components/SelfProfileBanner/SelfProfileBan
 import { ReceiverProfileSkeleton } from './ReceiverProfileSkeleton';
 import { useAccount } from 'wagmi';
 import type { Address } from 'viem';
+import { formatTxHashDisplay } from '@/lib/formatTxHash';
 import styles from './ReceiverProfile.module.css';
 
 interface Props {
@@ -74,8 +75,8 @@ export function ReceiverProfile({ address }: Props) {
   return (
     <div className={styles.wrapper}>
       <header className={styles.header}>
-        <h1 className={styles.addressTitle}>
-          {address.slice(0, 6)}…{address.slice(-4)}
+        <h1 className={styles.addressTitle} title={address}>
+          {formatTxHashDisplay(address)}
         </h1>
         <p className={styles.addressFull}>{address}</p>
       </header>
