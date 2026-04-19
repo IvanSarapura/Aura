@@ -7,12 +7,11 @@ import styles from './TxStatus.module.css';
 
 interface Props {
   phase: TipPhase;
-  approveTxHash?: string;
   tipTxHash?: string;
   errorMsg?: string;
 }
 
-export function TxStatus({ phase, approveTxHash, tipTxHash, errorMsg }: Props) {
+export function TxStatus({ phase, tipTxHash, errorMsg }: Props) {
   const { chainId } = useAccount();
 
   if (phase === 'idle') return null;
@@ -30,16 +29,6 @@ export function TxStatus({ phase, approveTxHash, tipTxHash, errorMsg }: Props) {
         <>
           <span className={styles.spinner} aria-hidden />
           <span>Waiting for approval confirmation…</span>
-          {approveTxHash && (
-            <a
-              href={explorerLink(approveTxHash)}
-              target="_blank"
-              rel="noreferrer"
-              className={styles.link}
-            >
-              View tx
-            </a>
-          )}
         </>
       )}
 

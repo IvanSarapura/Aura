@@ -2,6 +2,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ShareCard } from './ShareCard';
 
+vi.mock('wagmi', () => ({
+  useAccount: vi.fn(() => ({ chainId: undefined })),
+}));
+
 const RECIPIENT = '0x1234567890123456789012345678901234567890';
 
 describe('ShareCard', () => {

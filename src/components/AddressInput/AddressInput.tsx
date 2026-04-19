@@ -28,6 +28,11 @@ export function AddressInput({ onSubmit, disabled = false }: Props) {
     return trimmed as Address;
   }, []);
 
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue(e.target.value);
+    setError(undefined);
+  }, []);
+
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
@@ -45,10 +50,7 @@ export function AddressInput({ onSubmit, disabled = false }: Props) {
           type="text"
           placeholder="0x… wallet address"
           value={value}
-          onChange={(e) => {
-            setValue(e.target.value);
-            setError(undefined);
-          }}
+          onChange={handleChange}
           disabled={disabled}
           aria-label="Recipient wallet address"
           aria-invalid={!!error}

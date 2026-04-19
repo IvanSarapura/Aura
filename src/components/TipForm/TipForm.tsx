@@ -77,7 +77,6 @@ export function TipForm({ recipient, trustLevel }: Props) {
 
   const {
     phase,
-    approveTxHash,
     tipTxHash,
     errorMsg,
     canSubmit,
@@ -229,12 +228,7 @@ export function TipForm({ recipient, trustLevel }: Props) {
             </p>
           )}
 
-          <TxStatus
-            phase={phase}
-            approveTxHash={approveTxHash}
-            tipTxHash={tipTxHash}
-            errorMsg={errorMsg}
-          />
+          <TxStatus phase={phase} tipTxHash={tipTxHash} errorMsg={errorMsg} />
 
           <button
             className={styles.button}

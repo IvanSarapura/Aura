@@ -14,5 +14,12 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     css: { modules: { classNameStrategy: 'non-scoped' } },
     exclude: ['**/node_modules/**', '**/contracts/test/**'],
+    deps: {
+      optimizer: {
+        ssr: {
+          include: ['viem'],
+        },
+      },
+    },
   },
 });

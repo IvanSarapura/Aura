@@ -2,6 +2,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { AddressInput } from './AddressInput';
 
+vi.mock('viem', () => ({
+  isAddress: (addr: string) => /^0x[0-9a-fA-F]{40}$/.test(addr),
+}));
+
 const VALID_ADDRESS = '0x1234567890123456789012345678901234567890';
 
 describe('AddressInput', () => {

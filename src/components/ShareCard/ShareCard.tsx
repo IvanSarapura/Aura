@@ -1,6 +1,8 @@
 'use client';
 
 import type { TrustLevel } from '@/hooks/useScout';
+import { useAccount } from 'wagmi';
+import { getExplorerUrl } from '@/config/chains';
 import styles from './ShareCard.module.css';
 
 interface Props {
@@ -24,12 +26,13 @@ export function ShareCard({
   tipTxHash,
   onReset,
 }: Props) {
+  const { chainId } = useAccount();
   const short = `${recipient.slice(0, 6)}…${recipient.slice(-4)}`;
   const trust = trustLevel ?? 'Medium';
   const emoji = TRUST_EMOJI[trust];
 
   const shareText = encodeURIComponent(
-    `I just sent ${amountDisplay} USDm to ${short} via @AuraDApp on @Celo. Trust level: ${trust} ${emoji} 🌿 #Web3 #Celo`,
+    `I just sent ${amountDisplay} USDm to ${short} via @Auradapp on @Celo. Trust level: ${trust} ${emoji} 🌿 #Web3 #Celo`,
   );
 
   const farcasterUrl = `https://warpcast.com/~/compose?text=${shareText}`;
@@ -43,7 +46,12 @@ export function ShareCard({
   return (
     <div className={styles.card} role="status">
       <div className={styles.receipt}>
-        <p className={styles.brand}>Aura</p>
+        <p className={styles.brand} aria-label="Aura">
+          <span className={styles.brandSymbol} aria-hidden="true">
+            ✦
+          </span>
+          <span className={styles.brandText}>Aura</span>
+        </p>
 
         <div className={styles.divider} />
 
@@ -69,7 +77,7 @@ export function ShareCard({
               <dt>Tx</dt>
               <dd>
                 <a
-                  href={`https://sepolia.celoscan.io/tx/${tipTxHash}`}
+                  href={chainId ? getExplorerUrl(chainId, tipTxHash) : '#'}
                   target="_blank"
                   rel="noreferrer"
                   className={styles.link}
@@ -82,7 +90,10 @@ export function ShareCard({
         </dl>
 
         <div className={styles.divider} />
-        <p className={styles.footer}>Powered by Aura · Celo</p>
+        <p className={styles.footer}>
+          <span className={styles.footerLabel}>Powered by</span>
+          <span className={styles.footerBrand}>MiniPay · Celo</span>
+        </p>
       </div>
 
       <div className={styles.actions}>
