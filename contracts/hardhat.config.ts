@@ -9,6 +9,17 @@ const DEPLOYER_KEY = process.env.DEPLOYER_PRIVATE_KEY;
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY ?? '';
 const accounts = DEPLOYER_KEY ? [DEPLOYER_KEY] : [];
 
+/**
+ * Hardhat `@nomicfoundation/hardhat-verify` uses Etherscan **API V2** only when
+ * `etherscan.apiKey` is a **string**. An object of per-network keys keeps V1
+ * URLs (e.g. api.celoscan.io/api) and Celoscan now rejects them with:
+ * "You are using a deprecated V1 endpoint, switch to Etherscan API V2".
+ *
+ * Create one free key at https://etherscan.io/apidashboard — it covers Celo
+ * mainnet (42220) and Celo Sepolia (11142220) on the unified multichain API.
+ */
+const ETHERSCAN_V2_API_KEY = process.env.ETHERSCAN_API_KEY?.trim() ?? '';
+
 const config: HardhatUserConfig = {
   solidity: {
     version: '0.8.24',
@@ -27,10 +38,7 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: {
-      celo: process.env.NEXT_PUBLIC_CELOSCAN_API_KEY ?? '',
-      celoSepolia: process.env.NEXT_PUBLIC_CELOSCAN_API_KEY ?? '',
-    },
+    apiKey: ETHERSCAN_V2_API_KEY,
     customChains: [
       {
         network: 'celo',
@@ -49,6 +57,9 @@ const config: HardhatUserConfig = {
         },
       },
     ],
+  },
+  sourcify: {
+    enabled: false,
   },
   paths: {
     sources: './contracts',
