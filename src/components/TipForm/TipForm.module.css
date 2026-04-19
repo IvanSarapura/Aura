@@ -40,10 +40,33 @@
   color: var(--color-text-muted);
 }
 
-.amountRow {
-  position: relative;
+/* Amount + currency: one row, mobile-first (stack only if needed on very narrow) */
+.amountCurrencyRow {
   display: flex;
-  align-items: center;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.amountInput {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.currencySelect {
+  flex: 0 0 auto;
+  min-width: 6.75rem;
+  max-width: 42%;
+  width: auto;
+}
+
+@media (max-width: 320px) {
+  .currencySelect {
+    min-width: 5.75rem;
+    max-width: 46%;
+  }
 }
 
 .input,
@@ -67,6 +90,11 @@
   outline: none;
   -webkit-appearance: none;
   appearance: none;
+}
+
+.amountCurrencyRow .input.amountInput,
+.amountCurrencyRow .select.currencySelect {
+  width: 100%;
 }
 
 .select {
@@ -94,16 +122,6 @@
 .inputError:focus {
   border-color: var(--color-error);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error) 16%, transparent);
-}
-
-.unit {
-  position: absolute;
-  right: 0.875rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  pointer-events: none;
-  font-family: var(--font-mono);
 }
 
 .textarea {

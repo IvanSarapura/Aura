@@ -29,6 +29,8 @@ export interface TokenInfo {
   symbol: string;
   name: string;
   decimals: number;
+  /** If false, shown in UI but not yet usable for tipping (e.g. wiring in progress). */
+  tipEnabled?: boolean;
 }
 
 export const SUPPORTED_TOKENS: Record<SupportedChainId, readonly TokenInfo[]> =
@@ -60,6 +62,14 @@ export const SUPPORTED_TOKENS: Record<SupportedChainId, readonly TokenInfo[]> =
         symbol: 'mUSDm',
         name: 'Mock USDm (testnet)',
         decimals: 18,
+        tipEnabled: true,
+      },
+      {
+        address: '0xdE9e4C3ce781b4bA68120d6261cbad65ce0aB00b',
+        symbol: 'USDm',
+        name: 'Mento Dollar (testnet)',
+        decimals: 18,
+        tipEnabled: false,
       },
     ],
   };
@@ -71,5 +81,7 @@ export function getSupportedTokens(
 }
 
 export function getDefaultToken(chainId: SupportedChainId): TokenInfo {
-  return SUPPORTED_TOKENS[chainId][0];
+  const list = SUPPORTED_TOKENS[chainId];
+  const firstTippable = list.find((t) => t.tipEnabled !== false);
+  return firstTippable ?? list[0];
 }

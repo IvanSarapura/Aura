@@ -117,40 +117,59 @@ export function TipForm({ recipient, trustLevel }: Props) {
         />
       ) : (
         <div className={styles.formPanel}>
-          {/* Token selector — only shown when multiple tokens available */}
-          {supportedTokens.length > 1 && (
-            <div className={styles.field}>
-              <label htmlFor="tip-token" className={styles.label}>
-                Token
-              </label>
-              <select
-                id="tip-token"
-                className={styles.select}
-                disabled={isWorking}
-                value={selectedToken?.address ?? ''}
-                onChange={(e) => {
-                  const token = supportedTokens.find(
-                    (t) =>
-                      t.address.toLowerCase() === e.target.value.toLowerCase(),
-                  );
-                  if (token) setSelectedToken(token);
-                }}
-              >
-                {supportedTokens.map((t) => (
-                  <option key={t.address} value={t.address}>
-                    {t.symbol} — {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Amount */}
+          {/* Amount + currency: one row (mobile-first). Token list from contracts. */}
           <div className={styles.field}>
-            <label htmlFor="tip-amount" className={styles.label}>
+            <p id="tip-amount-label" className={styles.label}>
               Amount
-            </label>
-            <div className={styles.amountRow}>
+            </p>
+            {supportedTokens.length > 0 ? (
+              <div
+                className={styles.amountCurrencyRow}
+                role="group"
+                aria-labelledby="tip-amount-label"
+              >
+                <input
+                  id="tip-amount"
+                  className={`${styles.input} ${styles.amountInput} ${errors.amount ? styles.inputError : ''}`}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  disabled={isWorking}
+                  aria-describedby={
+                    errors.amount ? 'tip-amount-error' : undefined
+                  }
+                  {...register('amount')}
+                />
+                <select
+                  id="tip-currency"
+                  className={`${styles.select} ${styles.currencySelect}`}
+                  disabled={isWorking}
+                  value={selectedToken?.address ?? ''}
+                  aria-label="Tip currency"
+                  onChange={(e) => {
+                    const token = supportedTokens.find(
+                      (t) =>
+                        t.address.toLowerCase() ===
+                        e.target.value.toLowerCase(),
+                    );
+                    if (token && token.tipEnabled !== false) {
+                      setSelectedToken(token);
+                    }
+                  }}
+                >
+                  {supportedTokens.map((t) => (
+                    <option
+                      key={t.address}
+                      value={t.address}
+                      disabled={t.tipEnabled === false}
+                    >
+                      {t.symbol}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
               <input
                 id="tip-amount"
                 className={`${styles.input} ${errors.amount ? styles.inputError : ''}`}
@@ -161,12 +180,11 @@ export function TipForm({ recipient, trustLevel }: Props) {
                 disabled={isWorking}
                 {...register('amount')}
               />
-              <span className={styles.unit}>
-                {selectedToken?.symbol ?? '—'}
-              </span>
-            </div>
+            )}
             {errors.amount && (
-              <p className={styles.error}>{errors.amount.message}</p>
+              <p id="tip-amount-error" className={styles.error}>
+                {errors.amount.message}
+              </p>
             )}
           </div>
 
@@ -222,23 +240,23 @@ export function TipForm({ recipient, trustLevel }: Props) {
             </p>
           )}
 
-          {phase === 'error' && errorMsg && (
-            <p className={styles.errorMsg} role="alert">
-              {errorMsg}
-            </p>
-          )}
-
           <TxStatus phase={phase} tipTxHash={tipTxHash} errorMsg={errorMsg} />
 
-          <button
-            className={styles.button}
-            type="submit"
-            disabled={!canSubmit || isWorking}
-            aria-busy={isWorking}
-          >
-            {isWorking && <span className={styles.spinner} aria-hidden />}
-            {PHASE_LABELS[phase]}
-          </button>
+          {phase === 'error' ? (
+            <button className={styles.button} type="button" onClick={reset}>
+              Try again
+            </button>
+          ) : (
+            <button
+              className={styles.button}
+              type="submit"
+              disabled={!canSubmit || isWorking}
+              aria-busy={isWorking}
+            >
+              {isWorking && <span className={styles.spinner} aria-hidden />}
+              {PHASE_LABELS[phase]}
+            </button>
+          )}
         </div>
       )}
     </form>

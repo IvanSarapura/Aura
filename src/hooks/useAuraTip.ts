@@ -175,8 +175,20 @@ export function useAuraTip({
   }, [phase, ready, needsApproval, approveSim, tipSim, writeContractAsync]);
 
   function handleError(err: unknown) {
+    // viem wraps MetaMask errors — rejection code may live on err.cause or err.name
     const code = (err as { code?: number }).code;
-    if (code === 4001 || code === -32603) {
+    const causeCode = (err as { cause?: { code?: number } }).cause?.code;
+    const isRejection =
+      code === 4001 ||
+      code === -32603 ||
+      causeCode === 4001 ||
+      causeCode === -32603 ||
+      (err instanceof Error &&
+        (err.name === 'UserRejectedRequestError' ||
+          err.message.toLowerCase().includes('user rejected') ||
+          err.message.toLowerCase().includes('user denied')));
+
+    if (isRejection) {
       setPhase('idle');
       return;
     }
