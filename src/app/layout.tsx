@@ -41,6 +41,10 @@ export const metadata: Metadata = {
     title: APP_NAME,
     description: APP_DESCRIPTION,
   },
+  other: {
+    'talentapp:project_verification':
+      '28d17b0f5c1493fdb1161d71de6d29d65930b082814f3b51e481f35c8fd9c1971df5cdd744e86d1b6e06d2fca0026001a682ee4b8bd46dc95927fe0a12e603e7',
+  },
 };
 
 export const viewport: Viewport = {
