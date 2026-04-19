@@ -96,7 +96,7 @@ export function ImpactCard({ result, address }: Props) {
         </div>
         <div className={styles.stat}>
           <dt className={styles.statLabel}>Vol. Sent</dt>
-          <dd>${stats.usdmVolume}</dd>
+          <dd>${stats.stablecoinVolume}</dd>
         </div>
 
         {auraStats && (

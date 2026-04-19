@@ -9,6 +9,7 @@ import styles from './ShareCard.module.css';
 interface Props {
   recipient: string;
   amountDisplay: string;
+  tokenSymbol: string;
   trustLevel?: TrustLevel;
   tipTxHash?: string;
   onReset: () => void;
@@ -23,6 +24,7 @@ const TRUST_EMOJI: Record<TrustLevel, string> = {
 export function ShareCard({
   recipient,
   amountDisplay,
+  tokenSymbol,
   trustLevel,
   tipTxHash,
   onReset,
@@ -33,7 +35,7 @@ export function ShareCard({
   const emoji = TRUST_EMOJI[trust];
 
   const shareText = encodeURIComponent(
-    `I just sent ${amountDisplay} USDm to ${short} via @Auradapp on @Celo. Trust level: ${trust} ${emoji} 🌿 #Web3 #Celo`,
+    `I just sent ${amountDisplay} ${tokenSymbol} to ${short} via @Auradapp on @Celo. Trust level: ${trust} ${emoji} 🌿 #Web3 #Celo`,
   );
 
   const farcasterUrl = `https://warpcast.com/~/compose?text=${shareText}`;
@@ -63,7 +65,9 @@ export function ShareCard({
           </div>
           <div className={styles.row}>
             <dt>Amount</dt>
-            <dd className={styles.amount}>{amountDisplay} USDm</dd>
+            <dd className={styles.amount}>
+              {amountDisplay} {tokenSymbol}
+            </dd>
           </div>
           {trustLevel && (
             <div className={styles.row}>
@@ -123,7 +127,7 @@ export function ShareCard({
             rel="noreferrer"
             className={`${styles.shareBtn} ${styles.addCash}`}
           >
-            Add USDm in MiniPay
+            Add {tokenSymbol} in MiniPay
           </a>
         )}
 

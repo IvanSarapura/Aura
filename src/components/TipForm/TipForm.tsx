@@ -111,6 +111,7 @@ export function TipForm({ recipient, trustLevel }: Props) {
         <ShareCard
           recipient={recipient}
           amountDisplay={amount || '0'}
+          tokenSymbol={selectedToken?.symbol ?? 'USDm'}
           trustLevel={trustLevel}
           tipTxHash={tipTxHash}
           onReset={handleReset}

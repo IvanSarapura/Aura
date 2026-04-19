@@ -112,7 +112,7 @@ describe('GET /api/scout', () => {
     const body = await res.json();
     const { stats } = body;
     expect(stats).toHaveProperty('txCount');
-    expect(stats).toHaveProperty('usdmVolume');
+    expect(stats).toHaveProperty('stablecoinVolume');
     expect(stats).toHaveProperty('lastActive');
     expect(stats).toHaveProperty('walletAge');
   });

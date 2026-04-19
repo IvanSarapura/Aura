@@ -11,7 +11,7 @@ const BASE_RESULT: ScoutResult = {
   isBuilder: false,
   stats: {
     txCount: 150,
-    usdmVolume: '500.00',
+    stablecoinVolume: '500.00',
     lastActive: '2024-01-15T10:00:00Z',
     walletAge: '2022-03-01T00:00:00Z',
   },
@@ -42,7 +42,7 @@ describe('ImpactCard', () => {
     expect(screen.getByText(BASE_RESULT.headline)).toBeInTheDocument();
   });
 
-  it('renders tx count and usdm volume stats', () => {
+  it('renders tx count and stablecoin volume stats', () => {
     render(<ImpactCard result={BASE_RESULT} address={ADDRESS} />);
     expect(screen.getByText('150')).toBeInTheDocument();
     expect(screen.getByText('$500.00')).toBeInTheDocument();

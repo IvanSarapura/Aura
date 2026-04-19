@@ -19,7 +19,7 @@ export interface ScoutResult {
   isBuilder: boolean;
   stats: {
     txCount: number;
-    usdmVolume: string;
+    stablecoinVolume: string;
     lastActive: string | null;
     walletAge: string | null;
   };

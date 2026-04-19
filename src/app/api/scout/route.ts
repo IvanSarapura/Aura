@@ -2,67 +2,77 @@ import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import type { ScoutResult, TrustLevel, AuraStats } from '@/hooks/useScout';
 import { fetchTips } from '@/lib/fetchTips';
+import { SUPPORTED_TOKENS, type SupportedChainId } from '@/config/contracts';
 
 const CELO_MAINNET_ID = 42220;
 const CELO_SEPOLIA_ID = 11142220;
 
 // ── On-chain data fetchers ────────────────────────────────────────────────────
 
-interface BlockscoutStats {
+interface WalletStats {
   txCount: number;
-  usdmVolume: string; // formatted USDm transferred
-  lastActive: string | null; // ISO date string, null if no transactions
-  walletAge: string | null; // ISO date string of first tx, null if no transactions
+  stablecoinVolume: string; // sum of all isStablecoin tokens sent, normalized to USD units
+  lastActive: string | null;
+  walletAge: string | null;
 }
 
-async function fetchBlockscoutStats(address: string): Promise<BlockscoutStats> {
+async function fetchBlockscoutStats(address: string): Promise<WalletStats> {
   const base = 'https://celo-sepolia.blockscout.com/api/v2';
-  const usdmAddress = process.env.NEXT_PUBLIC_USDM_ADDRESS_TESTNET ?? '';
+  const stablecoins = SUPPORTED_TOKENS[
+    CELO_SEPOLIA_ID as SupportedChainId
+  ].filter((t) => t.isStablecoin);
 
-  const [txsRes, transfersRes, addrRes] = await Promise.all([
+  // Fetch wallet txs, addr summary, and each stablecoin transfer history in parallel
+  const results = await Promise.all([
     fetch(`${base}/addresses/${address}/transactions`),
-    usdmAddress
-      ? fetch(
-          `${base}/addresses/${address}/token-transfers?token=${usdmAddress}&filter=from`,
-        )
-      : Promise.resolve(null),
     fetch(`${base}/addresses/${address}`),
+    ...stablecoins.map((t) =>
+      fetch(
+        `${base}/addresses/${address}/token-transfers?token=${t.address}&filter=from`,
+      ),
+    ),
   ]);
 
-  // 422 = address unknown to Blockscout (new wallet, no activity) — treat as empty
-  if (txsRes.status === 422 || (addrRes && addrRes.status === 422)) {
+  const txsRes = results[0];
+  const addrRes = results[1];
+  const transferResponses = results.slice(2);
+
+  // 422 = address unknown to Blockscout (new wallet, no activity)
+  if (txsRes.status === 422 || addrRes.status === 422) {
     return {
       txCount: 0,
-      usdmVolume: '0.00',
+      stablecoinVolume: '0.00',
       lastActive: null,
       walletAge: null,
     };
   }
   if (!txsRes.ok) throw new Error(`Blockscout txs error: ${txsRes.status}`);
-  if (addrRes && !addrRes.ok)
-    throw new Error(`Blockscout addr error: ${addrRes.status}`);
+  if (!addrRes.ok) throw new Error(`Blockscout addr error: ${addrRes.status}`);
 
-  const txData = await txsRes.json();
-  const transferData =
-    transfersRes && transfersRes.ok ? await transfersRes.json() : { items: [] };
-  const addrData = addrRes.ok ? await addrRes.json() : {};
+  const [txData, addrData] = await Promise.all([txsRes.json(), addrRes.json()]);
 
   const txCount = addrData.tx_count ?? txData.items?.length ?? 0;
   const items: { timestamp?: string }[] = txData.items ?? [];
   const lastActive = items[0]?.timestamp ?? null;
   const walletAge = items[items.length - 1]?.timestamp ?? null;
 
-  const totalUsdm = (transferData.items ?? []).reduce(
-    (acc: bigint, t: { total?: { value?: string } }) =>
-      acc + BigInt(t.total?.value ?? '0'),
-    0n,
-  );
-  const usdmVolume = (Number(totalUsdm) / 1e18).toFixed(2);
+  // Sum transfer volumes across all stablecoins, normalizing each by its own decimals
+  let total = 0;
+  for (const [i, res] of transferResponses.entries()) {
+    if (!res.ok) continue;
+    const data = await res.json();
+    const decimals = stablecoins[i]?.decimals ?? 18;
+    total += (data.items ?? []).reduce(
+      (acc: number, t: { total?: { value?: string } }) =>
+        acc + Number(t.total?.value ?? '0') / 10 ** decimals,
+      0,
+    );
+  }
 
-  return { txCount, usdmVolume, lastActive, walletAge };
+  return { txCount, stablecoinVolume: total.toFixed(2), lastActive, walletAge };
 }
 
-async function fetchCeloscanStats(address: string): Promise<BlockscoutStats> {
+async function fetchCeloscanStats(address: string): Promise<WalletStats> {
   const apiKey =
     process.env.CELOSCAN_API_KEY ??
     process.env.NEXT_PUBLIC_CELOSCAN_API_KEY ??
@@ -89,6 +99,7 @@ async function fetchCeloscanStats(address: string): Promise<BlockscoutStats> {
   const transfers = Array.isArray(transferData.result)
     ? transferData.result
     : [];
+
   const txCount = txs.length;
   const lastActive = txs[0]?.timeStamp
     ? new Date(Number(txs[0].timeStamp) * 1000).toISOString()
@@ -97,16 +108,25 @@ async function fetchCeloscanStats(address: string): Promise<BlockscoutStats> {
     ? new Date(Number(txs[txs.length - 1].timeStamp) * 1000).toISOString()
     : null;
 
-  const usdmTransfers = transfers.filter(
-    (t: { tokenSymbol?: string }) => t.tokenSymbol === 'cUSD',
+  // Filter token transfers by known stablecoin contract addresses and sum with correct decimals
+  const stablecoins = SUPPORTED_TOKENS[
+    CELO_MAINNET_ID as SupportedChainId
+  ].filter((t) => t.isStablecoin);
+  const stablecoinAddressSet = new Set(
+    stablecoins.map((t) => t.address.toLowerCase()),
   );
-  const totalUsdm = usdmTransfers.reduce(
-    (acc: bigint, t: { value?: string }) => acc + BigInt(t.value ?? '0'),
-    0n,
-  );
-  const usdmVolume = (Number(totalUsdm) / 1e18).toFixed(2);
+  const stablecoinVolume = transfers
+    .filter((t: { contractAddress?: string }) =>
+      stablecoinAddressSet.has((t.contractAddress ?? '').toLowerCase()),
+    )
+    .reduce((acc: number, t: { value?: string; contractAddress?: string }) => {
+      const addr = (t.contractAddress ?? '').toLowerCase();
+      const token = stablecoins.find((s) => s.address.toLowerCase() === addr);
+      return acc + Number(t.value ?? '0') / 10 ** (token?.decimals ?? 18);
+    }, 0)
+    .toFixed(2);
 
-  return { txCount, usdmVolume, lastActive, walletAge };
+  return { txCount, stablecoinVolume, lastActive, walletAge };
 }
 
 // ── Builder detection — wallet has deployed at least one contract ─────────────
@@ -175,26 +195,24 @@ async function fetchAuraStats(address: string): Promise<AuraStats> {
 // ── Trust level heuristic (fallback when no AI key) ──────────────────────────
 
 function deriveTrustLevel(
-  stats: BlockscoutStats,
+  stats: WalletStats,
   auraStats: AuraStats | null,
 ): TrustLevel {
   const ageMs = stats.walletAge
     ? Date.now() - new Date(stats.walletAge).getTime()
     : 0;
   const ageDays = ageMs / (1000 * 60 * 60 * 24);
-  const volume = parseFloat(stats.usdmVolume);
+  const volume = parseFloat(stats.stablecoinVolume);
 
   const tipsReceived = auraStats?.tipsReceived ?? 0;
   const tipsSent = auraStats?.tipsSent ?? 0;
   const uniqueTippers = auraStats?.uniqueTippers ?? 0;
 
-  // High: strong generic history OR proven Aura reputation (receive and/or send)
   if (stats.txCount >= 50 && ageDays >= 180 && volume >= 100) return 'High';
   if (auraStats && tipsReceived >= 10 && uniqueTippers >= 3) return 'High';
   if (auraStats && tipsSent >= 20) return 'High';
   if (auraStats && tipsSent >= 12 && tipsReceived >= 3) return 'High';
 
-  // Medium: moderate generic activity OR meaningful Aura activity (tips in either direction)
   if (stats.txCount >= 10 && ageDays >= 30) return 'Medium';
   if (auraStats && tipsReceived >= 3) return 'Medium';
   if (auraStats && tipsSent >= 5) return 'Medium';
@@ -203,7 +221,7 @@ function deriveTrustLevel(
 }
 
 function buildFallbackResult(
-  stats: BlockscoutStats,
+  stats: WalletStats,
   isBuilder: boolean,
   auraStats: AuraStats | null,
 ): ScoutResult {
@@ -233,7 +251,7 @@ function buildFallbackResult(
 
 async function analyzeWithClaude(
   address: string,
-  stats: BlockscoutStats,
+  stats: WalletStats,
   isBuilder: boolean,
   auraStats: AuraStats | null,
 ): Promise<ScoutResult> {
@@ -259,7 +277,7 @@ Analyze this wallet and return a JSON object with EXACTLY this shape:
 Wallet: ${address}
 On-chain stats:
 - Transactions: ${stats.txCount}
-- USDm volume: $${stats.usdmVolume}
+- Stablecoin volume sent: $${stats.stablecoinVolume}
 - Last active: ${stats.lastActive ?? 'unknown'}
 - Wallet age: ${stats.walletAge ?? 'unknown'}
 - Is smart contract deployer: ${isBuilder}
