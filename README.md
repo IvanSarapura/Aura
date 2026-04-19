@@ -20,8 +20,9 @@ Paste any address into Aura and get back:
 - **Builder badge** — detected from contract deployment history
 - **AI headline** — one-sentence summary written by Claude Haiku
 - **Activity tags** — "Veteran", "DeFi User", "Builder", etc.
-- **Stats panel** — transaction count, stablecoin volume, wallet age, last active date
-- **Payment form** — tip with USDm, USDC, or USDT in two taps
+- **Stats panel** — tx count, stablecoin volume, wallet age, last active date
+- **Aura stats** — tips received/sent, unique tippers, top categories, total volume
+- **Payment form** — tip with any supported stablecoin in two taps
 - **Tip feed** — history of every tip received and sent, decoded from chain events
 - **Shareable link + QR code** — your Aura profile URL, ready to post anywhere
 
@@ -64,8 +65,9 @@ User enters address
        ▼
 GET /api/scout?address=0x...
        │
-       ├── Blockscout / CeloScan  ─── tx count, USDm volume, wallet age
+       ├── Blockscout / CeloScan  ─── tx count, stablecoin volume, wallet age
        ├── Contract deployment check  ─── isBuilder flag
+       ├── fetchTips()  ────────────── aura-native stats (sent/received/volume)
        └── Claude Haiku  ────────────── trust level, headline, tags
                                         (heuristic fallback if no API key)
        │
@@ -73,7 +75,9 @@ GET /api/scout?address=0x...
 ReceiverProfile renders ImpactCard + TipForm + TipFeed
        │
        ├── TipForm submits → useAuraTip hook
-       │         approve ERC-20 →─── wait for receipt →─── tip() ───► TipSent event
+       │         approve ERC-20 →─── wait for receipt
+       │         poll allowance (8× @ 1.5s) →─── re-simulate tip()
+       │         writeContractAsync(tip) ───► TipSent event
        │
        └── TipFeed polls GET /api/tips
                    CeloScan getLogs (topic0 + topic2) → decodeCeloscanLogs()
@@ -87,6 +91,7 @@ layout.tsx
         └── Web3Provider
               ├── WagmiProvider
               ├── QueryClientProvider
+              │     └── MiniPayEffects  (auto-connect side-effect)
               └── RainbowKitProvider
 ```
 
@@ -100,7 +105,8 @@ idle ──► [submit]
           ├─ needsApproval = true
           │     useSimulateContract(approve)  ──► approving
           │     writeContractAsync(approve)
-          │     useWaitForTransactionReceipt  ──► publicClient.simulateContract(tip)
+          │     useWaitForTransactionReceipt
+          │     poll allowance (8× @ 1.5s)   ──► publicClient.simulateContract(tip)
           │                                       writeContractAsync(tip)
           │
           └─ needsApproval = false
@@ -150,12 +156,40 @@ contract AuraTip {
 
 ## Token Support
 
-| Network      | Token    | Address                                      | Decimals |
-| ------------ | -------- | -------------------------------------------- | -------- |
-| Celo Mainnet | USDm     | `0x765DE816845861e75A25fCA122bb6898B8B1282a` | 18       |
-| Celo Mainnet | USDC     | `0xceba9300f2b948710d2653dd7b07f33a8b32118c` | 6        |
-| Celo Mainnet | USDT     | `0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e` | 6        |
-| Celo Sepolia | MockUSDm | `NEXT_PUBLIC_USDM_ADDRESS_TESTNET`           | 18       |
+### Mainnet (Celo)
+
+| Token | Name                     | Address                                      | Decimals |
+| ----- | ------------------------ | -------------------------------------------- | -------- |
+| USDm  | Mento Dollar             | `0x765DE816845861e75A25fCA122bb6898B8B1282a` | 18       |
+| USDC  | USD Coin                 | `0xceba9300f2b948710d2653dd7b07f33a8b32118c` | 6        |
+| USDT  | Tether USD               | `0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e` | 6        |
+| EURm  | Mento Euro               | `0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73` | 18       |
+| BRLm  | Mento Brazilian Real     | `0xe8537a3d056da446677b9e9d6c5db704eaab4787` | 18       |
+| KESm  | Mento Kenyan Shilling    | `0x456a3D042C0DbD3db53D5489e98dFb038553B0d0` | 18       |
+| PHPm  | Mento Philippine Peso    | `0x105d4A9306D2E55a71d2Eb95B81553AE1dC20d7B` | 18       |
+| COPm  | Mento Colombian Peso     | `0x8a567e2ae79ca692bd748ab832081c45de4041ea` | 18       |
+| AUDm  | Mento Australian Dollar  | `0x7175504C455076F15c04A2F90a8e352281F492F9` | 18       |
+| ZARm  | Mento South African Rand | `0x4c35853A3B4e647fD266f4de678dCc8fEC410BF6` | 18       |
+| GHSm  | Mento Ghanaian Cedi      | `0xfAeA5F3404bbA20D3cc2f8C4B0A888F55a3c7313` | 18       |
+| NGNm  | Mento Nigerian Naira     | `0xE2702Bd97ee33c88c8f6f92DA3B733608aa76F71` | 18       |
+| JPYm  | Mento Japanese Yen       | `0xc45eCF20f3CD864B32D9794d6f76814aE8892e20` | 18       |
+
+### Testnet (Celo Sepolia)
+
+| Token | Name                     | Address                                      | Decimals |
+| ----- | ------------------------ | -------------------------------------------- | -------- |
+| mUSDm | Mock USDm                | `NEXT_PUBLIC_USDM_ADDRESS_TESTNET`           | 18       |
+| USDm  | Mento Dollar             | `0xdE9e4C3ce781b4bA68120d6261cbad65ce0aB00b` | 18       |
+| EURm  | Mento Euro               | `0xA99dC247d6b7B2E3ab48a1fEE101b83cD6aCd82a` | 18       |
+| BRLm  | Mento Brazilian Real     | `0x2294298942fdc79417DE9E0D740A4957E0e7783a` | 18       |
+| KESm  | Mento Kenyan Shilling    | `0xC7e4635651E3e3Af82b61d3E23c159438daE3BbF` | 18       |
+| PHPm  | Mento Philippine Peso    | `0x0352976d940a2C3FBa0C3623198947Ee1d17869E` | 18       |
+| COPm  | Mento Colombian Peso     | `0x5F8d55c3627d2dc0a2B4afa798f877242F382F67` | 18       |
+| AUDm  | Mento Australian Dollar  | `0x5873Faeb42F3563dcD77F0fbbdA818E6d6DA3139` | 18       |
+| ZARm  | Mento South African Rand | `0x10CCfB235b0E1Ed394bACE4560C3ed016697687e` | 18       |
+| GHSm  | Mento Ghanaian Cedi      | `0x5e94B8C872bD47BC4255E60ECBF44D5E66e7401C` | 18       |
+| NGNm  | Mento Nigerian Naira     | `0x3d5ae86F34E2a82771496D140daFAEf3789dF888` | 18       |
+| JPYm  | Mento Japanese Yen       | `0x85Bee67D435A39f7467a8a9DE34a5B73D25Df426` | 18       |
 
 ---
 
@@ -166,12 +200,13 @@ The `/api/scout` route fetches raw on-chain stats, then calls Claude Haiku with 
 ```
 Stats:
 - Transactions: 312
-- USDm volume: $1,420.00
+- Stablecoin volume: $1,420.00
 - Wallet age: 847 days
 - Last active: 14 days ago
 - Builder (deployed contracts): true
-
-Return JSON: { trustLevel, headline, tags[] }
+- Tips received: 12 | Tips sent: 5
+- Unique tippers: 8
+- Top categories: work, content, code
 ```
 
 Claude returns:
@@ -184,7 +219,72 @@ Claude returns:
 }
 ```
 
+The scout result also includes Aura-native stats computed from on-chain tip events:
+
+```typescript
+{
+  trustLevel: 'Low' | 'Medium' | 'High',
+  headline: string,
+  isBuilder: boolean,
+  stats: {
+    txCount: number,
+    stablecoinVolume: string,   // sum across ALL isStablecoin tokens
+    lastActive: string | null,
+    walletAge: string | null
+  },
+  auraStats: {
+    tipsReceived: number,
+    tipsSent: number,
+    uniqueTippers: number,
+    topCategories: string[],
+    totalVolumeReceived: string
+  } | null
+}
+```
+
 If `ANTHROPIC_API_KEY` is not set, a deterministic heuristic computes the same fields from the stats — no AI key required for the app to function.
+
+---
+
+## MiniPay Integration
+
+Aura is optimized for [MiniPay](https://minipay.opera.com/), Opera's mobile wallet with millions of users in Africa:
+
+- **Max width 430px** layout matches MiniPay's viewport
+- **48px minimum touch targets** on all interactive elements
+- **Auto-connect** via `useMiniPay` hook — detects `window.ethereum.isMiniPay` and connects the injected wallet automatically, no user tap required
+- **CIP-42 fee abstraction** — gas paid in USDm instead of CELO; `feeCurrency` is injected into every `writeContractAsync` call and simulation when inside MiniPay
+- **"Add Cash" deeplink** — displayed inside MiniPay after a successful tip, to top up balance without leaving the app
+- **QR codes** for offline payment link sharing outside MiniPay
+- **`env(safe-area-inset-bottom)`** for iOS notch handling
+
+---
+
+## Routes
+
+| Route                  | Description                                                     |
+| ---------------------- | --------------------------------------------------------------- |
+| `/`                    | Homepage: address search + connect wallet                       |
+| `/[address]`           | Profile: ImpactCard + TipForm + TipFeed (recent 3 tips)         |
+| `/[address]/tips`      | Full received-tips page with filter bar                         |
+| `/[address]/tips-sent` | Full sent-tips page (guarded: only visible to the wallet owner) |
+| `GET /api/scout`       | Wallet reputation analysis (AI or heuristic)                    |
+| `GET /api/tips`        | Paginated tip history — `?address=&type=received\|sent&page=1`  |
+
+---
+
+## Tip Filtering
+
+The full-page tip views (`/tips` and `/tips-sent`) include a live filter bar:
+
+| Filter       | Type     | Behaviour                                |
+| ------------ | -------- | ---------------------------------------- |
+| Min amount   | number   | Hide tips below this value               |
+| Max amount   | number   | Hide tips above this value               |
+| Category     | dropdown | Derived from the actual tips in the feed |
+| Peer address | text     | Prefix-match on the counterparty address |
+
+Filters apply client-side via `useDeferredValue` for zero-lag typing. A badge shows the number of active filters; a "Clear all" button resets them.
 
 ---
 
@@ -194,63 +294,69 @@ If `ANTHROPIC_API_KEY` is not set, a deterministic heuristic computes the same f
 Aura/
 ├── contracts/
 │   ├── contracts/
-│   │   ├── AuraTip.sol          # Stateless multi-token tip contract
-│   │   └── MockUSDm.sol         # ERC-20 mock for testnet
+│   │   ├── AuraTip.sol           # Stateless multi-token tip contract
+│   │   └── MockUSDm.sol          # ERC-20 mock for testnet
 │   ├── scripts/
-│   │   └── deploy.ts            # Auto-detects chain, deploys correct set
+│   │   └── deploy.ts             # Auto-detects chain, deploys correct set
 │   ├── test/
-│   │   └── AuraTip.ts           # Hardhat tests
-│   └── hardhat.config.ts        # Celo Mainnet + Celo Sepolia networks
+│   │   └── AuraTip.ts            # Hardhat tests
+│   └── hardhat.config.ts         # Celo Mainnet + Celo Sepolia networks
 │
 └── src/
     ├── abi/
-    │   ├── auraTip.ts            # AuraTip ABI (as const for type inference)
-    │   └── erc20.ts              # Minimal ERC-20 ABI
+    │   ├── auraTip.ts             # AuraTip ABI (as const for type inference)
+    │   └── erc20.ts               # Minimal ERC-20 ABI
     │
     ├── app/
-    │   ├── layout.tsx            # Root layout: metadata, fonts, providers
-    │   ├── page.tsx              # Home: hero + AddressInput
+    │   ├── layout.tsx             # Root layout: metadata, fonts, providers
+    │   ├── page.tsx               # Home: hero + AddressInput
     │   ├── [address]/
-    │   │   ├── page.tsx          # Profile route: address validation + ReceiverProfile
-    │   │   ├── loading.tsx       # Suspense skeleton
-    │   │   └── error.tsx         # Error boundary
+    │   │   ├── page.tsx           # Profile route: ReceiverProfile
+    │   │   ├── tips/page.tsx      # Full received-tips list with filters
+    │   │   ├── tips-sent/page.tsx # Full sent-tips list (wallet-gated)
+    │   │   ├── loading.tsx        # Suspense skeleton
+    │   │   └── error.tsx          # Error boundary
     │   ├── api/
-    │   │   ├── scout/route.ts    # GET /api/scout — AI reputation analysis
-    │   │   └── tips/route.ts     # GET /api/tips — on-chain tip history
-    │   └── globals.css           # Design tokens, keyframes, CSS reset
+    │   │   ├── scout/route.ts     # GET /api/scout — AI reputation analysis
+    │   │   └── tips/route.ts      # GET /api/tips — paginated tip history
+    │   └── globals.css            # Design tokens, keyframes, CSS reset
     │
     ├── components/
-    │   ├── AddressInput/         # Address form with viem validation
-    │   ├── ConnectButton/        # RainbowKit custom button
-    │   ├── ImpactCard/           # Trust meter, builder badge, stats
-    │   ├── PaymentLink/          # URL + copy + QR code
-    │   ├── ReceiverProfile/      # Profile page composition
-    │   ├── SelfProfileBanner/    # Own-profile banner with share actions
-    │   ├── ShareCard/            # Post-tip receipt with social sharing
-    │   ├── TipFeed/              # On-chain tip history list
-    │   ├── TipForm/              # Multi-token payment form
-    │   └── TxStatus/             # Transaction phase indicator
+    │   ├── AddressInput/          # Address form with viem validation
+    │   ├── CategorySelect/        # Tip category dropdown
+    │   ├── ConnectButton/         # RainbowKit custom button
+    │   ├── ImpactCard/            # Trust meter, builder badge, stats
+    │   ├── PaymentLink/           # URL + copy + QR code
+    │   ├── ReceiverProfile/       # Profile page composition
+    │   ├── SelfProfileBanner/     # Own-profile banner with share actions
+    │   ├── SentTipsGuard/         # Access control for tips-sent route
+    │   ├── ShareCard/             # Post-tip receipt with social sharing
+    │   ├── TipFeed/               # On-chain tip history + filter bar
+    │   ├── TipFilterBar/          # Amount / category / peer filter UI
+    │   ├── TipForm/               # Multi-token payment form
+    │   ├── TokenSelect/           # Token picker for TipForm
+    │   └── TxStatus/              # Transaction phase indicator
     │
     ├── config/
-    │   ├── chains.ts             # Celo chain definitions + explorer helpers
-    │   ├── contracts.ts          # Contract addresses + token registry per chain
-    │   ├── env.ts                # Environment variable validation
-    │   ├── theme.ts              # RainbowKit dark theme (Celo green accent)
-    │   └── wagmi.ts              # Wagmi + RainbowKit config
+    │   ├── chains.ts              # Celo chain definitions + explorer helpers
+    │   ├── contracts.ts           # Contract addresses + token registry per chain
+    │   ├── env.ts                 # Environment variable validation
+    │   ├── theme.ts               # RainbowKit dark theme (Celo green accent)
+    │   └── wagmi.ts               # Wagmi + RainbowKit config
     │
     ├── hooks/
-    │   ├── useAuraTip.ts         # Two-step approve → tip orchestration
-    │   ├── useMiniPay.ts         # MiniPay detection + auto-connect
-    │   ├── useScout.ts           # React Query wrapper for /api/scout
-    │   └── useTips.ts            # React Query wrapper for /api/tips
+    │   ├── useAuraTip.ts          # Two-step approve → tip orchestration
+    │   ├── useMiniPay.ts          # MiniPay detection + auto-connect
+    │   ├── useScout.ts            # React Query wrapper for /api/scout
+    │   └── useTips.ts             # React Query wrapper for /api/tips
     │
     ├── lib/
-    │   ├── schemas/tip.ts        # Zod schema for TipForm validation
-    │   └── tipEvents.ts          # TipSent log decoding (CeloScan + Blockscout)
+    │   ├── schemas/tip.ts         # Zod schema for TipForm validation
+    │   └── tipEvents.ts           # TipSent log decoding (CeloScan + Blockscout)
     │
     └── providers/
-        ├── ClientWeb3Provider.tsx  # dynamic() wrapper (ssr: false)
-        └── Web3Provider.tsx        # Wagmi + QueryClient + RainbowKit tree
+        ├── ClientWeb3Provider.tsx   # dynamic() wrapper (ssr: false)
+        └── Web3Provider.tsx         # Wagmi + QueryClient + RainbowKit tree
 ```
 
 ---
@@ -283,7 +389,7 @@ NEXT_PUBLIC_CHAIN_PROFILE=testnet       # or mainnet
 # AI Scout (optional — heuristic fallback if unset)
 ANTHROPIC_API_KEY=
 
-# CeloScan (needed for tip history on mainnet)
+# CeloScan (needed for tip history)
 NEXT_PUBLIC_CELOSCAN_API_KEY=
 
 # Alchemy RPC (needed for contract deployment)
@@ -364,9 +470,11 @@ npx hardhat verify --network celo <AURA_TIP_ADDRESS>
 | ---------------------------------- | --------------------------------------- |
 | `npm run dev`                      | Start Next.js dev server                |
 | `npm run build`                    | Production build (fails on type errors) |
+| `npm start`                        | Start production server                 |
 | `npm run typecheck`                | TypeScript validation                   |
 | `npm run lint`                     | ESLint                                  |
 | `npm run format`                   | Prettier autofix                        |
+| `npm run format:check`             | Prettier check (used in CI)             |
 | `npm test`                         | Run all tests                           |
 | `npm run test:watch`               | Vitest watch mode                       |
 | `npm run test:coverage`            | Coverage report                         |
@@ -383,41 +491,15 @@ npx hardhat verify --network celo <AURA_TIP_ADDRESS>
 | -------------------------------------- | ------------ | ------------------------------------------------------------- |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Yes (prod)   | Reown project ID — [cloud.reown.com](https://cloud.reown.com) |
 | `NEXT_PUBLIC_CHAIN_PROFILE`            | No           | `testnet` (default) or `mainnet`                              |
-| `NEXT_PUBLIC_APP_NAME`                 | No           | Wallet modal display name                                     |
-| `ANTHROPIC_API_KEY`                    | No           | Claude API key for AI Scout                                   |
-| `NEXT_PUBLIC_CELOSCAN_API_KEY`         | No           | CeloScan API key for tip history + verification               |
+| `NEXT_PUBLIC_APP_NAME`                 | No           | Wallet modal display name (default: Aura)                     |
+| `ANTHROPIC_API_KEY`                    | No           | Claude API key for AI Scout (heuristic fallback if unset)     |
+| `NEXT_PUBLIC_CELOSCAN_API_KEY`         | No           | CeloScan API key for tip history + Scout volume               |
 | `ALCHEMY_API_KEY`                      | No           | Alchemy RPC key for deploys                                   |
+| `ETHERSCAN_API_KEY`                    | No           | Used by Hardhat for contract verification                     |
 | `NEXT_PUBLIC_AURA_TIP_ADDRESS_MAINNET` | After deploy | AuraTip on Celo Mainnet                                       |
 | `NEXT_PUBLIC_AURA_TIP_ADDRESS_TESTNET` | After deploy | AuraTip on Celo Sepolia                                       |
 | `NEXT_PUBLIC_USDM_ADDRESS_TESTNET`     | After deploy | MockUSDm on Celo Sepolia                                      |
-| `DEPLOYER_PRIVATE_KEY`                 | For deploy   | Deployer private key (server-only)                            |
-
----
-
-## MiniPay Integration
-
-Aura is optimized for [MiniPay](https://minipay.opera.com/), Opera's mobile wallet with millions of users in Africa:
-
-- **Max width 430px** layout matches MiniPay's viewport
-- **48px minimum touch targets** on all interactive elements
-- **Auto-connect** via `useMiniPay` hook: detects `window.ethereum.isMiniPay` and connects the injected wallet automatically
-- **QR codes** for offline payment link sharing
-- **MiniPay deeplinks** in the ShareCard (shown only inside MiniPay)
-- **`env(safe-area-inset-bottom)`** for iOS notch handling
-
----
-
-## Key Design Decisions
-
-**Stateless contract.** AuraTip holds no state beyond emitting events. Reputation is derived client-side from the immutable event log — nothing can be deleted or manipulated.
-
-**No database.** Every profile is computed on demand from chain data. There are no users, no accounts, no passwords. A wallet address is the only identity primitive.
-
-**Heuristic fallback.** The AI Scout degrades gracefully. Without an Anthropic key, a deterministic algorithm computes trust level from stats. The app is fully functional either way.
-
-**Decimal-aware multi-token.** USDC and USDT use 6 decimals; USDm uses 18. The token registry stores decimals per token and `parseUnits(amount, token.decimals)` is called at the form layer — preventing silent precision loss.
-
-**Post-approval re-simulation.** After the ERC-20 approve confirms on-chain, the `tip()` call is re-simulated via `publicClient.simulateContract()` with fresh RPC state. This avoids the "simulation unavailable" bug that occurs when the pre-flight simulation runs against insufficient allowance.
+| `DEPLOYER_PRIVATE_KEY`                 | For deploy   | Deployer private key (server-only, never `NEXT_PUBLIC_`)      |
 
 ---
 
@@ -427,16 +509,18 @@ Aura is optimized for [MiniPay](https://minipay.opera.com/), Opera's mobile wall
 npm test
 ```
 
-54 tests across 6 suites covering:
+93 tests across 8 suites:
 
-| Suite                   | What it tests                                   |
-| ----------------------- | ----------------------------------------------- |
-| `AddressInput.test.tsx` | Validation, accessibility, submit callback      |
-| `ImpactCard.test.tsx`   | All trust levels, builder badge, stat rendering |
-| `ShareCard.test.tsx`    | Social links, MiniPay deeplink gating           |
-| `useAuraTip.test.ts`    | Phase transitions, approve flow, error handling |
-| `useScout.test.ts`      | React Query behavior, loading/error states      |
-| `useMiniPay.test.ts`    | MiniPay detection, auto-connect logic           |
+| Suite                   | What it tests                                           |
+| ----------------------- | ------------------------------------------------------- |
+| `AddressInput.test.tsx` | Validation, accessibility, submit callback              |
+| `ImpactCard.test.tsx`   | All trust levels, builder badge, aura stats rendering   |
+| `ShareCard.test.tsx`    | Social links, MiniPay deeplink gating, tokenSymbol prop |
+| `useAuraTip.test.ts`    | Phase transitions, approve flow, error handling         |
+| `useScout.test.ts`      | React Query behavior, loading/error states              |
+| `useMiniPay.test.ts`    | MiniPay detection, auto-connect logic                   |
+| `filterTips.test.ts`    | Amount/category/peer filter logic                       |
+| `formatTxHash.test.ts`  | Hash truncation utility                                 |
 
 Wagmi hooks are mocked with `vi.mock('wagmi')`. Cast return types as `as unknown as ReturnType<typeof hook>` to avoid implementing internal Wagmi types.
 
@@ -458,6 +542,24 @@ NEXT_PUBLIC_CHAIN_PROFILE: testnet
 ```
 
 Pre-commit hooks (Husky + lint-staged) auto-fix ESLint and Prettier on staged files before each commit.
+
+---
+
+## Key Design Decisions
+
+**Stateless contract.** AuraTip holds no state beyond emitting events. Reputation is derived client-side from the immutable event log — nothing can be deleted or manipulated.
+
+**No database.** Every profile is computed on demand from chain data. There are no users, no accounts, no passwords. A wallet address is the only identity primitive.
+
+**Heuristic fallback.** The AI Scout degrades gracefully. Without an Anthropic key, a deterministic algorithm computes trust level from stats. The app is fully functional either way.
+
+**Decimal-aware multi-token.** USDC and USDT use 6 decimals; all Mento stablecoins use 18. The token registry stores decimals per token and `parseUnits(amount, token.decimals)` is called at the form layer — preventing silent precision loss.
+
+**Post-approval re-simulation.** After the ERC-20 approve confirms on-chain, the `tip()` call is re-simulated via `publicClient.simulateContract()` with fresh RPC state. This avoids the "simulation unavailable" bug that occurs when the pre-flight simulation runs against insufficient allowance. Allowance polling (8 retries @ 1.5 s) ensures the approval is visible to the node before re-simulation.
+
+**Stablecoin-agnostic volume.** The Scout aggregates volume across all tokens flagged `isStablecoin: true` in the registry — so adding new Mento currencies automatically improves reputation accuracy with no Scout changes.
+
+**MiniPay-first UX.** Auto-connect, fee abstraction, and touch-optimised layout are first-class features, not add-ons. The app is usable with zero wallet configuration inside MiniPay.
 
 ---
 
