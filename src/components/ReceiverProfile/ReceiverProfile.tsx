@@ -49,7 +49,12 @@ function ProfileContent({ address, isOwnProfile }: ContentProps) {
       />
 
       {isOwnProfile && (
-        <TipFeed address={address} type="sent" title="Tips you sent" />
+        <TipFeed
+          address={address}
+          type="sent"
+          title="Tips you sent"
+          viewAllHref={`/${address}/tips-sent`}
+        />
       )}
 
       {!isOwnProfile &&

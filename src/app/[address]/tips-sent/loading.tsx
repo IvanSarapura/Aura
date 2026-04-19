@@ -1,8 +1,8 @@
 import styles from '../address.module.css';
-import tipsStyles from './tips.module.css';
+import tipsStyles from './tips-sent.module.css';
 import feedStyles from '@/components/TipFeed/TipFeed.module.css';
 
-export default function TipsLoading() {
+export default function TipsSentLoading() {
   return (
     <main className={styles.main}>
       <header className={styles.topbar}>

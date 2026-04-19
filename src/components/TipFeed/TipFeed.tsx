@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import type { Address } from 'viem';
 import { useTips, type TipEvent } from '@/hooks/useTips';
@@ -11,6 +12,10 @@ interface Props {
   type?: 'received' | 'sent';
   title?: string;
   viewAllHref?: string;
+  /** Right side of the section header (e.g. Back on full tips page). Uses same style as View all. */
+  headerTrailing?: { href: string; label: string };
+  /** Full `/[address]/tips` experience: load all pages, no Load more, filter shell above title. */
+  tipsFullPage?: boolean;
 }
 
 function formatDate(iso: string): string {
@@ -71,6 +76,8 @@ export function TipFeed({
   type = 'received',
   title,
   viewAllHref,
+  headerTrailing,
+  tipsFullPage = false,
 }: Props) {
   const {
     data,
@@ -81,6 +88,19 @@ export function TipFeed({
     isFetchingNextPage,
     refetch,
   } = useTips(address, type);
+
+  useEffect(() => {
+    if (!tipsFullPage || isPending || isError) return;
+    if (!hasNextPage || isFetchingNextPage) return;
+    void fetchNextPage();
+  }, [
+    tipsFullPage,
+    isPending,
+    isError,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  ]);
 
   // Deduplicate by txHash — offset pagination drifts when new tips are added
   // between a page-1 refetch and a subsequent "Load more" call.
@@ -97,12 +117,43 @@ export function TipFeed({
 
   return (
     <section className={styles.section} aria-label={sectionTitle}>
+      {tipsFullPage && (
+        <div
+          className={styles.filterBar}
+          role="region"
+          aria-label="Tip filters (preview — not active yet)"
+          title="Filters coming soon"
+        >
+          <span className={styles.filterLabel}>Filter</span>
+          <span className={styles.filterMock}>
+            <span className={styles.filterMockValue}>All tips</span>
+            <span className={styles.filterChevron} aria-hidden>
+              ▾
+            </span>
+          </span>
+        </div>
+      )}
+
       <div className={styles.header}>
         <h2 className={styles.title}>{sectionTitle}</h2>
-        {!isPending && !isError && total > 0 && viewAllHref && (
-          <Link href={viewAllHref} className={styles.viewAll}>
-            View all
+        {headerTrailing ? (
+          <Link
+            href={headerTrailing.href}
+            className={styles.viewAll}
+            scroll
+            aria-label="Back to profile"
+          >
+            {headerTrailing.label}
           </Link>
+        ) : (
+          !isPending &&
+          !isError &&
+          total > 0 &&
+          viewAllHref && (
+            <Link href={viewAllHref} className={styles.viewAll} scroll>
+              View all
+            </Link>
+          )
         )}
       </div>
 
@@ -138,7 +189,7 @@ export function TipFeed({
             ))}
           </ul>
 
-          {hasNextPage && (
+          {hasNextPage && !tipsFullPage && (
             <button
               className={styles.loadMore}
               onClick={() => void fetchNextPage()}

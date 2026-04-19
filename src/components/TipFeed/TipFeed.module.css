@@ -210,9 +210,10 @@
   max-width: 22ch;
 }
 
-/* ── Load more ── */
+/* ── Load more & filter bar (shared shell) ── */
 
-.loadMore {
+.loadMore,
+.filterBar {
   width: 100%;
   padding: 0.625rem 1rem;
   background: color-mix(in srgb, var(--color-celo-green) 8%, transparent);
@@ -221,10 +222,13 @@
   color: var(--color-celo-green);
   font-size: 0.875rem;
   font-weight: 600;
-  cursor: pointer;
   transition:
     background var(--transition-fast),
     border-color var(--transition-fast);
+}
+
+.loadMore {
+  cursor: pointer;
 }
 
 .loadMore:hover:not(:disabled) {
@@ -235,6 +239,46 @@
 .loadMore:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: default;
+}
+
+.filterLabel {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.filterMock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  min-width: 0;
+  opacity: 0.92;
+}
+
+.filterMockValue {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-celo-green);
+  letter-spacing: 0.01em;
+}
+
+.filterChevron {
+  font-size: 0.65rem;
+  line-height: 1;
+  color: var(--color-celo-green);
+  opacity: 0.85;
 }
 
 /* ── Error state ── */
