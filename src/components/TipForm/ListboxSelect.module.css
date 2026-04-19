@@ -140,7 +140,7 @@
     color var(--transition-fast);
 }
 
-.option:hover {
+.option:hover:not(.optionDisabled) {
   background: color-mix(in srgb, var(--color-celo-green) 10%, transparent);
   color: var(--color-text-primary);
 }
@@ -149,6 +149,22 @@
   background: color-mix(in srgb, var(--color-celo-green) 14%, transparent);
   color: var(--color-celo-green);
   font-weight: 600;
+}
+
+.optionSelected.optionDisabled {
+  background: color-mix(in srgb, var(--color-celo-green) 8%, transparent);
+  color: var(--color-text-muted);
+}
+
+.optionDisabled {
+  cursor: not-allowed;
+  color: var(--color-text-muted);
+  opacity: 0.55;
+}
+
+.optionDisabled:hover {
+  background: transparent;
+  color: var(--color-text-muted);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -21,7 +21,7 @@ interface Props {
   viewAllHref?: string;
   /** Right side of the section header (e.g. Back on full tips page). Uses same style as View all. */
   headerTrailing?: { href: string; label: string };
-  /** Full `/[address]/tips` experience: load all pages, no Load more, filter shell above title. */
+  /** Full `/[address]/tips` experience: load all pages, no Load more, filters below title row. */
   tipsFullPage?: boolean;
 }
 
@@ -131,17 +131,6 @@ export function TipFeed({
 
   return (
     <section className={styles.section} aria-label={sectionTitle}>
-      {tipsFullPage && (
-        <TipFilterBar
-          filters={filters}
-          onChange={setFilters}
-          categories={categories}
-          resultCount={filteredTips.length}
-          totalCount={tips.length}
-          disabled={isPending}
-        />
-      )}
-
       <div className={styles.header}>
         <h2 className={styles.title}>{sectionTitle}</h2>
         {headerTrailing ? (
@@ -164,6 +153,17 @@ export function TipFeed({
           )
         )}
       </div>
+
+      {tipsFullPage && (
+        <TipFilterBar
+          filters={filters}
+          onChange={setFilters}
+          categories={categories}
+          resultCount={filteredTips.length}
+          totalCount={tips.length}
+          disabled={isPending}
+        />
+      )}
 
       {isPending && <SkeletonList />}
 

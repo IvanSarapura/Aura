@@ -1,63 +1,56 @@
 'use client';
 
 import { useMemo, useState, useRef, useEffect, useId } from 'react';
-import { TIP_CATEGORIES } from '@/lib/schemas/tip';
+import type { Address } from 'viem';
+import type { TokenInfo } from '@/config/contracts';
 import styles from './ListboxSelect.module.css';
 
-function formatCategory(c: string) {
-  if (!c) return '';
-  return c.charAt(0).toUpperCase() + c.slice(1);
+function addrEq(a: string, b: string) {
+  return a.toLowerCase() === b.toLowerCase();
 }
 
-export interface CategorySelectProps {
+export interface TokenSelectProps {
   id: string;
   value: string;
-  onChange: (v: string) => void;
+  tokens: readonly TokenInfo[];
+  onChange: (address: Address) => void;
   onBlur: () => void;
   disabled?: boolean;
   invalid?: boolean;
-  /**
-   * When set, prepends a listbox row with value "" (e.g. filter: "All categories").
-   * Omit in Send a tip — category is always one of the enum values.
-   */
-  emptyOptionLabel?: string;
-  /**
-   * Override option list (e.g. categories derived from loaded tips).
-   * Defaults to `TIP_CATEGORIES` from the tip schema.
-   */
-  options?: readonly string[];
+  'aria-label'?: string;
 }
 
-export function CategorySelect({
+export function TokenSelect({
   id,
   value,
+  tokens,
   onChange,
   onBlur,
   disabled,
   invalid,
-  emptyOptionLabel,
-  options,
-}: CategorySelectProps) {
+  'aria-label': ariaLabel,
+}: TokenSelectProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const listId = useId();
 
-  const rows = useMemo(() => {
-    const resolved = options ?? TIP_CATEGORIES;
-    const out: { key: string; value: string; label: string }[] = [];
-    if (emptyOptionLabel !== undefined) {
-      out.push({ key: '__empty', value: '', label: emptyOptionLabel });
-    }
-    for (const c of resolved) {
-      out.push({ key: c, value: c, label: formatCategory(c) });
-    }
-    return out;
-  }, [options, emptyOptionLabel]);
+  const selected = useMemo(
+    () => tokens.find((t) => addrEq(t.address, value)),
+    [tokens, value],
+  );
 
-  const triggerLabel =
-    value === '' && emptyOptionLabel !== undefined
-      ? emptyOptionLabel
-      : formatCategory(value);
+  const triggerLabel = selected?.symbol ?? 'Select token';
+
+  const rows = useMemo(
+    () =>
+      tokens.map((t) => ({
+        key: t.address,
+        address: t.address as Address,
+        label: t.symbol,
+        disabled: t.tipEnabled === false,
+      })),
+    [tokens],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -94,6 +87,7 @@ export function CategorySelect({
         id={id}
         className={`${styles.trigger} ${invalid ? styles.triggerError : ''}`}
         disabled={disabled}
+        aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
@@ -128,22 +122,27 @@ export function CategorySelect({
             aria-labelledby={id}
             inert={!open}
           >
-            {rows.map((row) => (
-              <li
-                key={row.key}
-                role="option"
-                aria-selected={row.value === value}
-                className={`${styles.option} ${row.value === value ? styles.optionSelected : ''}`}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  onChange(row.value);
-                  setOpen(false);
-                  onBlur();
-                }}
-              >
-                {row.label}
-              </li>
-            ))}
+            {rows.map((row) => {
+              const isSelected = addrEq(row.address, value);
+              return (
+                <li
+                  key={row.key}
+                  role="option"
+                  aria-selected={isSelected}
+                  aria-disabled={row.disabled}
+                  className={`${styles.option} ${isSelected ? styles.optionSelected : ''} ${row.disabled ? styles.optionDisabled : ''}`}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    if (row.disabled) return;
+                    onChange(row.address);
+                    setOpen(false);
+                    onBlur();
+                  }}
+                >
+                  {row.label}
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>

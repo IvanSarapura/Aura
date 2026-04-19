@@ -18,6 +18,7 @@ import {
 } from '@/config/contracts';
 import type { TrustLevel } from '@/hooks/useScout';
 import { CategorySelect } from './CategorySelect';
+import { TokenSelect } from './TokenSelect';
 import styles from './TipForm.module.css';
 
 interface Props {
@@ -142,33 +143,24 @@ export function TipForm({ recipient, trustLevel }: Props) {
                   }
                   {...register('amount')}
                 />
-                <select
-                  id="tip-currency"
-                  className={`${styles.select} ${styles.currencySelect}`}
-                  disabled={isWorking}
-                  value={selectedToken?.address ?? ''}
-                  aria-label="Tip currency"
-                  onChange={(e) => {
-                    const token = supportedTokens.find(
-                      (t) =>
-                        t.address.toLowerCase() ===
-                        e.target.value.toLowerCase(),
-                    );
-                    if (token && token.tipEnabled !== false) {
-                      setSelectedToken(token);
-                    }
-                  }}
-                >
-                  {supportedTokens.map((t) => (
-                    <option
-                      key={t.address}
-                      value={t.address}
-                      disabled={t.tipEnabled === false}
-                    >
-                      {t.symbol}
-                    </option>
-                  ))}
-                </select>
+                <div className={styles.currencySelect}>
+                  <TokenSelect
+                    id="tip-currency"
+                    tokens={supportedTokens}
+                    value={selectedToken?.address ?? ''}
+                    onChange={(addr) => {
+                      const token = supportedTokens.find(
+                        (t) => t.address.toLowerCase() === addr.toLowerCase(),
+                      );
+                      if (token && token.tipEnabled !== false) {
+                        setSelectedToken(token);
+                      }
+                    }}
+                    onBlur={() => {}}
+                    disabled={isWorking}
+                    aria-label="Tip currency"
+                  />
+                </div>
               </div>
             ) : (
               <input

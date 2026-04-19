@@ -93,7 +93,7 @@
 }
 
 .amountCurrencyRow .input.amountInput,
-.amountCurrencyRow .select.currencySelect {
+.amountCurrencyRow .currencySelect {
   width: 100%;
 }
 
