@@ -1,10 +1,17 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Address } from 'viem';
 import { useTips, type TipEvent } from '@/hooks/useTips';
 import { formatTxHashDisplay } from '@/lib/formatTxHash';
+import {
+  applyTipFilters,
+  deriveCategories,
+  EMPTY_FILTERS,
+  type TipFilters,
+} from '@/lib/filterTips';
+import { TipFilterBar } from '@/components/TipFilterBar/TipFilterBar';
 import styles from './TipFeed.module.css';
 
 interface Props {
@@ -89,6 +96,8 @@ export function TipFeed({
     refetch,
   } = useTips(address, type);
 
+  const [filters, setFilters] = useState<TipFilters>(EMPTY_FILTERS);
+
   useEffect(() => {
     if (!tipsFullPage || isPending || isError) return;
     if (!hasNextPage || isFetchingNextPage) return;
@@ -112,26 +121,25 @@ export function TipFeed({
   });
   const total = data?.pages[0]?.total ?? 0;
 
+  const filteredTips = tipsFullPage
+    ? applyTipFilters(tips, filters, type)
+    : tips;
+  const categories = tipsFullPage ? deriveCategories(tips) : [];
+
   const sectionTitle =
     title ?? (type === 'received' ? 'Tips received' : 'Tips sent');
 
   return (
     <section className={styles.section} aria-label={sectionTitle}>
       {tipsFullPage && (
-        <div
-          className={styles.filterBar}
-          role="region"
-          aria-label="Tip filters (preview — not active yet)"
-          title="Filters coming soon"
-        >
-          <span className={styles.filterLabel}>Filter</span>
-          <span className={styles.filterMock}>
-            <span className={styles.filterMockValue}>All tips</span>
-            <span className={styles.filterChevron} aria-hidden>
-              ▾
-            </span>
-          </span>
-        </div>
+        <TipFilterBar
+          filters={filters}
+          onChange={setFilters}
+          categories={categories}
+          resultCount={filteredTips.length}
+          totalCount={tips.length}
+          disabled={isPending}
+        />
       )}
 
       <div className={styles.header}>
@@ -168,23 +176,25 @@ export function TipFeed({
         </div>
       )}
 
-      {!isPending && !isError && tips.length === 0 && (
+      {!isPending && !isError && filteredTips.length === 0 && (
         <div className={styles.empty} role="status">
           <span className={styles.emptyIcon} aria-hidden>
             {type === 'received' ? '✦' : '↗'}
           </span>
           <p className={styles.emptyText}>
-            {type === 'received'
-              ? 'No tips received yet. Share your Aura link to get started.'
-              : 'No tips sent yet.'}
+            {tips.length === 0
+              ? type === 'received'
+                ? 'No tips received yet. Share your Aura link to get started.'
+                : 'No tips sent yet.'
+              : 'No tips match the current filters.'}
           </p>
         </div>
       )}
 
-      {!isPending && !isError && tips.length > 0 && (
+      {!isPending && !isError && filteredTips.length > 0 && (
         <>
           <ul className={styles.list} aria-label={`${sectionTitle} list`}>
-            {tips.map((tip) => (
+            {filteredTips.map((tip) => (
               <TipItem key={tip.txHash} tip={tip} type={type} />
             ))}
           </ul>

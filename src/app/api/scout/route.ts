@@ -184,14 +184,20 @@ function deriveTrustLevel(
   const ageDays = ageMs / (1000 * 60 * 60 * 24);
   const volume = parseFloat(stats.usdmVolume);
 
-  // High: strong generic history OR proven Aura reputation
-  if (stats.txCount >= 50 && ageDays >= 180 && volume >= 100) return 'High';
-  if (auraStats && auraStats.tipsReceived >= 10 && auraStats.uniqueTippers >= 3)
-    return 'High';
+  const tipsReceived = auraStats?.tipsReceived ?? 0;
+  const tipsSent = auraStats?.tipsSent ?? 0;
+  const uniqueTippers = auraStats?.uniqueTippers ?? 0;
 
-  // Medium: moderate generic activity OR early Aura activity OR builder
+  // High: strong generic history OR proven Aura reputation (receive and/or send)
+  if (stats.txCount >= 50 && ageDays >= 180 && volume >= 100) return 'High';
+  if (auraStats && tipsReceived >= 10 && uniqueTippers >= 3) return 'High';
+  if (auraStats && tipsSent >= 20) return 'High';
+  if (auraStats && tipsSent >= 12 && tipsReceived >= 3) return 'High';
+
+  // Medium: moderate generic activity OR meaningful Aura activity (tips in either direction)
   if (stats.txCount >= 10 && ageDays >= 30) return 'Medium';
-  if (auraStats && auraStats.tipsReceived >= 3) return 'Medium';
+  if (auraStats && tipsReceived >= 3) return 'Medium';
+  if (auraStats && tipsSent >= 5) return 'Medium';
 
   return 'Low';
 }
@@ -236,7 +242,7 @@ async function analyzeWithClaude(
   const auraSection = auraStats
     ? `Aura platform activity:
 - Tips received: ${auraStats.tipsReceived}
-- Tips sent: ${auraStats.tipsSent}
+- Tips sent: ${auraStats.tipsSent} (outgoing tips signal generosity and ecosystem participation; weigh alongside tips received)
 - Unique tippers: ${auraStats.uniqueTippers}
 - Total volume received: $${auraStats.totalVolumeReceived}
 - Top categories: ${auraStats.topCategories.join(', ') || 'none'}`
@@ -260,8 +266,8 @@ On-chain stats:
 ${auraSection}
 
 Rules:
-- trustLevel High: txCount ≥ 50, wallet age ≥ 180 days, volume ≥ $100 OR tipsReceived ≥ 10
-- trustLevel Medium: txCount ≥ 10, wallet age ≥ 30 days OR tipsReceived ≥ 3
+- trustLevel High: txCount ≥ 50, wallet age ≥ 180 days, volume ≥ $100 OR tipsReceived ≥ 10 with ≥3 unique tippers OR tipsSent ≥ 20 OR (tipsSent ≥ 12 AND tipsReceived ≥ 3)
+- trustLevel Medium: txCount ≥ 10, wallet age ≥ 30 days OR tipsReceived ≥ 3 OR tipsSent ≥ 5
 - trustLevel Low: everything else
 - headline must be encouraging and factual, max 80 chars
 

@@ -56,6 +56,7 @@ next-env.d.ts
 .agents/
 skills-lock.json
 
-# instructions
-AURA_BUILD_PROMPT.md
-AURA_PRODUCT_CONTEXT.md
+# instructions and context documents
+/docs/prompts/*.md
+/docs/context/*.md
+

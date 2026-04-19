@@ -37,6 +37,7 @@ export default async function TipsSentPage({ params }: Props) {
         <div className={tipsStyles.wrapper}>
           <SentTipsGuard address={address as Address}>
             <TipFeed
+              key={address}
               address={address as Address}
               type="sent"
               headerTrailing={{ href: `/${address}`, label: 'Back' }}

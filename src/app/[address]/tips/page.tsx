@@ -35,6 +35,7 @@ export default async function TipsPage({ params }: Props) {
       <div className={styles.body}>
         <div className={tipsStyles.wrapper}>
           <TipFeed
+            key={address}
             address={address as Address}
             type="received"
             headerTrailing={{ href: `/${address}`, label: 'Back' }}
