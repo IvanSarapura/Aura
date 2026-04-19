@@ -14,6 +14,9 @@ import type { Address, Hash } from 'viem';
 import { erc20Abi } from '@/abi/erc20';
 import { auraTipAbi } from '@/abi/auraTip';
 import { isSupportedChain, getContracts } from '@/config/contracts';
+// ── MiniPay: fee abstraction imports ─────────────────────────────────────────
+import { isMiniPayEnvironment } from '@/lib/isMiniPay';
+import { getFeeCurrencyAddress } from '@/config/celoFeeCurrency';
 
 export type TipPhase = 'idle' | 'approving' | 'tipping' | 'success' | 'error';
 
@@ -41,6 +44,16 @@ export function useAuraTip({
 
   const contracts =
     chainId && isSupportedChain(chainId) ? getContracts(chainId) : null;
+
+  // ── MiniPay: fee abstraction (CIP-42) ──────────────────────────────────────
+  // Only active when running inside MiniPay on a Celo network. This lets users
+  // pay gas in USDm instead of CELO. Left undefined on MetaMask / WalletConnect
+  // so desktop behaviour is completely unchanged.
+  const feeCurrency =
+    isMiniPayEnvironment() && chainId
+      ? getFeeCurrencyAddress(chainId)
+      : undefined;
+
   const ready =
     !!address &&
     !!contracts &&
@@ -128,8 +141,14 @@ export function useAuraTip({
           functionName: 'tip',
           args: [recipient, amountWei, tokenAddress, category, message],
           account: address,
+          // ── MiniPay: include feeCurrency so gas is paid in stablecoin ──────
+          ...(feeCurrency && { feeCurrency }),
         });
-        const hash = await writeContractAsync(request);
+        // ── MiniPay: propagate feeCurrency from simulation into the write tx ─
+        const hash = await writeContractAsync({
+          ...request,
+          ...(feeCurrency && { feeCurrency }),
+        });
         setTipTxHash(hash);
       } catch (err) {
         handleError(err);
@@ -161,12 +180,20 @@ export function useAuraTip({
             'Approval simulation not ready — fill in a valid amount',
           );
         setPhase('approving');
-        const hash = await writeContractAsync(approveSim.request);
+        // ── MiniPay: spread feeCurrency onto the simulated request ────────────
+        const hash = await writeContractAsync({
+          ...approveSim.request,
+          ...(feeCurrency && { feeCurrency }),
+        });
         setApproveTxHash(hash);
       } else {
         if (!tipSim) throw new Error('Tip simulation not ready');
         setPhase('tipping');
-        const hash = await writeContractAsync(tipSim.request);
+        // ── MiniPay: spread feeCurrency onto the simulated request ────────────
+        const hash = await writeContractAsync({
+          ...tipSim.request,
+          ...(feeCurrency && { feeCurrency }),
+        });
         setTipTxHash(hash);
       }
     } catch (err) {

@@ -3,7 +3,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { ShareCard } from './ShareCard';
 
 vi.mock('wagmi', () => ({
-  useAccount: vi.fn(() => ({ chainId: undefined })),
+  useAccount: vi.fn(() => ({ chainId: undefined, isConnected: false })),
+  // ── MiniPay: useMiniPay also needs useConnect ─────────────────────────────
+  useConnect: vi.fn(() => ({ connect: vi.fn() })),
 }));
 
 const RECIPIENT = '0x1234567890123456789012345678901234567890';

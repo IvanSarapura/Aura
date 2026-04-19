@@ -2,9 +2,14 @@
 
 import { ConnectButton as RainbowConnectButton } from '@rainbow-me/rainbowkit';
 import { celo, celoSepolia } from 'viem/chains';
+// ── MiniPay: hide "Connect wallet" when wallet is injected automatically ─────
+import { useMiniPay } from '@/hooks/useMiniPay';
 import styles from './ConnectButton.module.css';
 
 export function ConnectButton() {
+  // ── MiniPay: wallet is auto-injected — no manual connect needed ───────────
+  const { isMiniPay } = useMiniPay();
+
   return (
     <RainbowConnectButton.Custom>
       {({
@@ -28,13 +33,16 @@ export function ConnectButton() {
             })}
           >
             {!connected ? (
-              <button
-                className={styles.connectBtn}
-                onClick={openConnectModal}
-                type="button"
-              >
-                Connect wallet
-              </button>
+              // ── MiniPay: suppress connect button — auto-connect is in flight ──
+              isMiniPay ? null : (
+                <button
+                  className={styles.connectBtn}
+                  onClick={openConnectModal}
+                  type="button"
+                >
+                  Connect wallet
+                </button>
+              )
             ) : chain.unsupported ? (
               <button
                 className={`${styles.connectBtn} ${styles.wrong}`}

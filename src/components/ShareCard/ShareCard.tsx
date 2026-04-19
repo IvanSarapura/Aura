@@ -4,6 +4,8 @@ import type { TrustLevel } from '@/hooks/useScout';
 import { useAccount } from 'wagmi';
 import { getExplorerUrl } from '@/config/chains';
 import { formatTxHashDisplay } from '@/lib/formatTxHash';
+// ── MiniPay: single source of truth for isMiniPay detection ─────────────────
+import { useMiniPay } from '@/hooks/useMiniPay';
 import styles from './ShareCard.module.css';
 
 interface Props {
@@ -30,6 +32,8 @@ export function ShareCard({
   onReset,
 }: Props) {
   const { chainId } = useAccount();
+  // ── MiniPay: use shared hook instead of inline window detection ───────────
+  const { isMiniPay } = useMiniPay();
   const short = formatTxHashDisplay(recipient);
   const trust = trustLevel ?? 'Medium';
   const emoji = TRUST_EMOJI[trust];
@@ -40,11 +44,6 @@ export function ShareCard({
 
   const farcasterUrl = `https://warpcast.com/~/compose?text=${shareText}`;
   const twitterUrl = `https://x.com/intent/tweet?text=${shareText}`;
-
-  const isMiniPay =
-    typeof window !== 'undefined' &&
-    !!(window as Window & { ethereum?: { isMiniPay?: boolean } }).ethereum
-      ?.isMiniPay;
 
   return (
     <div className={styles.card} role="status">
