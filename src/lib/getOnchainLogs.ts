@@ -22,7 +22,8 @@ const TESTNET_CLIENT = createPublicClient({
 
 const MAINNET_CLIENT = createPublicClient({
   chain: celo,
-  transport: http(alchemyMainnetUrl()),
+  // If no Alchemy key is configured, fall back to Celo's default RPC URLs.
+  transport: alchemyMainnetUrl() ? http(alchemyMainnetUrl()) : http(),
 });
 
 function resolveSymbol(token: string, chainId: SupportedChainId): string {
@@ -55,25 +56,39 @@ export async function fetchTipsOnchain(
   const client = chainId === celo.id ? MAINNET_CLIENT : TESTNET_CLIENT;
 
   // Use contract deployment block if configured — avoids RPC block-range limits.
-  // Fallback: scan last 500k blocks (~28 days on Celo Sepolia at 5s/block).
+  // Fallback: scan a recent window (mainnet smaller than testnet by default).
   const deployBlockEnv =
     chainId === celo.id
       ? process.env.NEXT_PUBLIC_AURA_TIP_DEPLOY_BLOCK_MAINNET
       : process.env.NEXT_PUBLIC_AURA_TIP_DEPLOY_BLOCK_TESTNET;
 
+  const latest = await client.getBlockNumber();
+  const defaultWindow = chainId === celo.id ? 200_000n : 500_000n;
+
   const fromBlock = deployBlockEnv
     ? BigInt(deployBlockEnv)
-    : await client
-        .getBlockNumber()
-        .then((n) => (n > 500_000n ? n - 500_000n : 0n));
+    : latest > defaultWindow
+      ? latest - defaultWindow
+      : 0n;
 
-  const logs = await client.getLogs({
-    address: contractAddress,
-    event: TIP_SENT_EVENT,
-    args: type === 'received' ? { to: address } : { from: address },
-    fromBlock,
-    toBlock: 'latest',
-  });
+  // Some RPC providers enforce log-range or time limits. Chunk the scan.
+  const chunkSize = chainId === celo.id ? 20_000n : 50_000n;
+
+  const args = type === 'received' ? { to: address } : { from: address };
+
+  const logs = [];
+  for (let start = fromBlock; start <= latest; start += chunkSize + 1n) {
+    const end = start + chunkSize;
+    const toBlock = end > latest ? latest : end;
+    const chunk = await client.getLogs({
+      address: contractAddress,
+      event: TIP_SENT_EVENT,
+      args,
+      fromBlock: start,
+      toBlock,
+    });
+    logs.push(...chunk);
+  }
 
   if (logs.length === 0) return [];
 

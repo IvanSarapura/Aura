@@ -57,7 +57,7 @@ interface RawCeloscanLog {
   transactionHash: string;
   topics: string[];
   data: string;
-  timeStamp: string; // unix seconds as hex string "0x..."
+  timeStamp: string; // unix seconds (may be hex "0x..." or decimal string)
 }
 
 interface RawBlockscoutLog {
@@ -69,6 +69,12 @@ interface RawBlockscoutLog {
 
 function stripAddressPadding(topic: string): Address {
   return getAddress(`0x${topic.slice(-40)}`);
+}
+
+function parseUnixSeconds(input: string): number {
+  const s = input.trim();
+  const n = s.startsWith('0x') ? parseInt(s, 16) : parseInt(s, 10);
+  return Number.isFinite(n) ? n : 0;
 }
 
 export function decodeCeloscanLogs(
@@ -88,7 +94,7 @@ export function decodeCeloscanLogs(
       ) as [bigint, string, string];
 
       const decimals = tokenDecimals(token, chainId);
-      const ts = parseInt(l.timeStamp, 16);
+      const ts = parseUnixSeconds(l.timeStamp);
       const timestamp = new Date(ts * 1000).toISOString();
 
       return {

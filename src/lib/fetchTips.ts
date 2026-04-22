@@ -16,12 +16,47 @@ const IS_MAINNET = CHAIN_PROFILE === 'mainnet';
 const CHAIN_ID: SupportedChainId = IS_MAINNET ? celo.id : celoSepolia.id;
 const AURA_TIP_ADDRESS = CONTRACTS[CHAIN_ID].auraTip;
 
+function blockscoutBaseUrl(chainId: SupportedChainId): string {
+  return chainId === celo.id
+    ? 'https://celo.blockscout.com/api/v2'
+    : 'https://celo-sepolia.blockscout.com/api/v2';
+}
+
+interface RawCeloscanLog {
+  transactionHash: string;
+  topics: string[];
+  data: string;
+  timeStamp: string;
+}
+
+interface RawBlockscoutLog {
+  transaction_hash: string;
+  topics: string[];
+  data: string;
+  block_timestamp: string;
+}
+
+type CeloscanLogsResponse =
+  | { status: '1'; message: 'OK'; result: RawCeloscanLog[] }
+  | { status: '0'; message: string; result: string };
+
+async function readCeloscanJson(res: Response): Promise<CeloscanLogsResponse> {
+  const json = (await res.json()) as unknown;
+  if (typeof json !== 'object' || json === null) {
+    throw new Error('Celoscan returned non-object JSON');
+  }
+  return json as CeloscanLogsResponse;
+}
+
 async function fetchCeloscanTips(
   walletTopic: string,
   type: 'received' | 'sent',
 ): Promise<TipEvent[]> {
+  // Celoscan migrated to Etherscan API V2. Prefer server-side key; fall back to public key if set.
   const apiKey =
+    process.env.ETHERSCAN_API_KEY ??
     process.env.CELOSCAN_API_KEY ??
+    process.env.NEXT_PUBLIC_CELOSCAN_API_KEY ??
     process.env.NEXT_PUBLIC_CELOSCAN_API_KEY ??
     '';
 
@@ -29,7 +64,8 @@ async function fetchCeloscanTips(
   const operator =
     type === 'received' ? 'topic0_2_opr=and' : 'topic0_1_opr=and';
 
-  const url = new URL('https://api.celoscan.io/api');
+  // Etherscan API V2 (multichain) endpoint
+  const url = new URL('https://api.etherscan.io/v2/api');
   url.searchParams.set('chainid', '42220');
   url.searchParams.set('module', 'logs');
   url.searchParams.set('action', 'getLogs');
@@ -39,40 +75,92 @@ async function fetchCeloscanTips(
   url.searchParams.set(operator.split('=')[0], 'and');
   url.searchParams.set('fromBlock', '0');
   url.searchParams.set('toBlock', 'latest');
-  url.searchParams.set('page', '1');
-  url.searchParams.set('offset', '50');
-  url.searchParams.set('apikey', apiKey);
 
-  const res = await fetch(url.toString(), { next: { revalidate: 30 } });
-  if (!res.ok) throw new Error(`Celoscan error: ${res.status}`);
+  const pageSize = 100;
+  const allLogs: RawCeloscanLog[] = [];
 
-  const json = await res.json();
-  const logs = Array.isArray(json.result) ? json.result : [];
-  return decodeCeloscanLogs(logs, CHAIN_ID);
+  for (let page = 1; page <= 50; page++) {
+    url.searchParams.set('page', String(page));
+    url.searchParams.set('offset', String(pageSize));
+    url.searchParams.set('apikey', apiKey);
+
+    const res = await fetch(url.toString(), { next: { revalidate: 30 } });
+    if (!res.ok) throw new Error(`Celoscan HTTP error: ${res.status}`);
+
+    const json = await readCeloscanJson(res);
+
+    if (json.status !== '1') {
+      throw new Error(`Celoscan NOTOK: ${json.message} (${json.result})`);
+    }
+    if (!Array.isArray(json.result)) {
+      throw new Error('Celoscan OK response had non-array result');
+    }
+
+    allLogs.push(...json.result);
+    if (json.result.length < pageSize) break;
+  }
+
+  return decodeCeloscanLogs(allLogs, CHAIN_ID);
 }
 
 async function fetchBlockscoutTips(
   walletAddress: string,
   type: 'received' | 'sent',
 ): Promise<TipEvent[]> {
-  const base = 'https://celo-sepolia.blockscout.com/api/v2';
-  const url = `${base}/addresses/${AURA_TIP_ADDRESS}/logs?topic=${TIP_SENT_TOPIC0}&page_size=50`;
-
-  const res = await fetch(url, { next: { revalidate: 30 } });
-  // 404/422 = contract not indexed yet or unknown address — not an error
-  if (res.status === 404 || res.status === 422) return [];
-  if (!res.ok) throw new Error(`Blockscout error: ${res.status}`);
-
-  const json = await res.json();
-  const logs = Array.isArray(json.items) ? json.items : [];
-  const decoded = decodeBlockscoutLogs(logs, CHAIN_ID);
+  const base = blockscoutBaseUrl(CHAIN_ID);
 
   const wallet = walletAddress.toLowerCase();
-  return decoded.filter((t) =>
-    type === 'received'
-      ? t.to.toLowerCase() === wallet
-      : t.from.toLowerCase() === wallet,
-  );
+  const allDecoded: TipEvent[] = [];
+
+  const firstUrl = new URL(`${base}/addresses/${AURA_TIP_ADDRESS}/logs`);
+  firstUrl.searchParams.set('topic', TIP_SENT_TOPIC0);
+
+  let nextUrl: string | null = firstUrl.toString();
+
+  for (let page = 1; page <= 50 && nextUrl; page++) {
+    const res = await fetch(nextUrl, { next: { revalidate: 30 } });
+    // 404/422 = contract not indexed yet or unknown address — not an error
+    if (res.status === 404 || res.status === 422) return [];
+    if (!res.ok) throw new Error(`Blockscout HTTP error: ${res.status}`);
+
+    const json = (await res.json()) as unknown;
+    const items = (json as { items?: unknown })?.items;
+    const logs = Array.isArray(items) ? (items as RawBlockscoutLog[]) : [];
+    const decoded = decodeBlockscoutLogs(logs, CHAIN_ID);
+
+    const pageFiltered = decoded.filter((t) =>
+      type === 'received'
+        ? t.to.toLowerCase() === wallet
+        : t.from.toLowerCase() === wallet,
+    );
+    allDecoded.push(...pageFiltered);
+
+    // Blockscout v2 returns next_page_params on some chains; fall back to explicit page-based pagination.
+    const nextPageParams = (json as { next_page_params?: unknown })
+      ?.next_page_params;
+    if (nextPageParams && typeof nextPageParams === 'object') {
+      const u = new URL(`${base}/addresses/${AURA_TIP_ADDRESS}/logs`);
+      u.searchParams.set('topic', TIP_SENT_TOPIC0);
+      for (const [k, v] of Object.entries(
+        nextPageParams as Record<string, unknown>,
+      )) {
+        if (v == null) continue;
+        u.searchParams.set(k, String(v));
+      }
+      nextUrl = u.toString();
+    } else {
+      // If we got a full page but no cursor, try a traditional `page` param.
+      if (logs.length > 0) {
+        const u = new URL(firstUrl.toString());
+        u.searchParams.set('page', String(page + 1));
+        nextUrl = u.toString();
+      } else {
+        nextUrl = null;
+      }
+    }
+  }
+
+  return allDecoded;
 }
 
 export async function fetchTips(
@@ -83,11 +171,7 @@ export async function fetchTips(
   if (AURA_TIP_ADDRESS === '0x0000000000000000000000000000000000000000')
     return [];
 
-  if (IS_MAINNET) {
-    return fetchCeloscanTips(addressToTopic(address), type);
-  }
-
-  // Testnet: viem getLogs (primary) → Blockscout (fallback) → empty array
+  // RPC getLogs (primary) → Blockscout (fallback) → Celoscan (fallback, mainnet only) → empty array
   try {
     return await fetchTipsOnchain(
       address as Address,
@@ -107,6 +191,16 @@ export async function fetchTips(
         '[fetchTips] Blockscout fallback also failed:',
         fallbackErr,
       );
+      if (IS_MAINNET) {
+        try {
+          return await fetchCeloscanTips(addressToTopic(address), type);
+        } catch (celoscanErr) {
+          console.error(
+            '[fetchTips] Celoscan fallback also failed:',
+            celoscanErr,
+          );
+        }
+      }
       return [];
     }
   }
