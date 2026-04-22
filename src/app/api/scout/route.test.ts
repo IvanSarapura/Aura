@@ -50,9 +50,11 @@ function makeTipEvent(overrides?: Partial<TipEvent>): TipEvent {
 
 describe('GET /api/scout', () => {
   const originalApiKey = process.env.ANTHROPIC_API_KEY;
+  const originalChainProfile = process.env.NEXT_PUBLIC_CHAIN_PROFILE;
 
   beforeEach(() => {
     delete process.env.ANTHROPIC_API_KEY;
+    process.env.NEXT_PUBLIC_CHAIN_PROFILE = 'testnet';
     vi.mocked(fetchTips).mockResolvedValue([]);
     global.fetch = vi
       .fn()
@@ -61,6 +63,7 @@ describe('GET /api/scout', () => {
 
   afterEach(() => {
     process.env.ANTHROPIC_API_KEY = originalApiKey;
+    process.env.NEXT_PUBLIC_CHAIN_PROFILE = originalChainProfile;
   });
 
   it('returns 400 for missing address param', async () => {
@@ -233,5 +236,88 @@ describe('GET /api/scout', () => {
     const { stats } = await res.json();
     expect(stats.lastActive).toBeNull();
     expect(stats.walletAge).toBeNull();
+  });
+
+  it('mainnet path uses Etherscan V2 and falls back when NOTOK', async () => {
+    process.env.NEXT_PUBLIC_CHAIN_PROFILE = 'mainnet';
+
+    type MockResponse = Pick<Response, 'ok' | 'json' | 'status'>;
+    const asResponse = (r: MockResponse) => r as unknown as Response;
+
+    const etherscanNotOk: MockResponse = {
+      status: 200,
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          status: '0',
+          message: 'NOTOK',
+          result: 'rate limit',
+        }),
+    };
+
+    const blockscoutTxs: MockResponse = {
+      status: 200,
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          items: [{ timestamp: '2026-04-22T00:00:00Z' }],
+        }),
+    };
+    const blockscoutAddr: MockResponse = {
+      status: 200,
+      ok: true,
+      json: () => Promise.resolve({ tx_count: 1 }),
+    };
+
+    // Transfers can be empty and ok.
+    const blockscoutTransfers: MockResponse = {
+      status: 200,
+      ok: true,
+      json: () => Promise.resolve({ items: [] }),
+    };
+
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.includes('api.etherscan.io/v2/api'))
+        return asResponse(etherscanNotOk);
+
+      if (url.includes('/api/v2/addresses/') && url.includes('/transactions')) {
+        return asResponse(blockscoutTxs);
+      }
+      if (
+        url.includes('/api/v2/addresses/') &&
+        !url.includes('/transactions') &&
+        !url.includes('/token-transfers')
+      ) {
+        return asResponse(blockscoutAddr);
+      }
+      if (url.includes('/token-transfers'))
+        return asResponse(blockscoutTransfers);
+
+      return asResponse(EMPTY_BLOCKSCOUT as unknown as MockResponse);
+    }) as unknown as typeof fetch;
+
+    const req = new Request(
+      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
+    );
+    const res = await GET(req);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.stats.lastActive).toBeTruthy();
+  });
+
+  it('testnet builder detection does not use page_size param', async () => {
+    process.env.NEXT_PUBLIC_CHAIN_PROFILE = 'testnet';
+    const fetchMock = vi.fn().mockResolvedValue(EMPTY_BLOCKSCOUT);
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const req = new Request(
+      `http://localhost/api/scout?address=${VALID_ADDRESS}`,
+    );
+    await GET(req);
+
+    const urls = fetchMock.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(urls).not.toContain('page_size=');
   });
 });

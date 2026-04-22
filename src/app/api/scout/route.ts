@@ -16,11 +16,23 @@ interface WalletStats {
   walletAge: string | null;
 }
 
-async function fetchBlockscoutStats(address: string): Promise<WalletStats> {
-  const base = 'https://celo-sepolia.blockscout.com/api/v2';
-  const stablecoins = SUPPORTED_TOKENS[
-    CELO_SEPOLIA_ID as SupportedChainId
-  ].filter((t) => t.isStablecoin);
+function blockscoutBaseUrl(chainId: number): string {
+  return chainId === CELO_MAINNET_ID
+    ? 'https://celo.blockscout.com/api/v2'
+    : 'https://celo-sepolia.blockscout.com/api/v2';
+}
+
+function getStablecoins(chainId: number) {
+  const supported = SUPPORTED_TOKENS[chainId as SupportedChainId] ?? [];
+  return supported.filter((t) => t.isStablecoin);
+}
+
+async function fetchBlockscoutStats(
+  address: string,
+  chainId: number,
+): Promise<WalletStats> {
+  const base = blockscoutBaseUrl(chainId);
+  const stablecoins = getStablecoins(chainId);
 
   // Fetch wallet txs, addr summary, and each stablecoin transfer history in parallel
   const results = await Promise.all([
@@ -72,54 +84,87 @@ async function fetchBlockscoutStats(address: string): Promise<WalletStats> {
   return { txCount, stablecoinVolume: total.toFixed(2), lastActive, walletAge };
 }
 
-async function fetchCeloscanStats(address: string): Promise<WalletStats> {
-  const apiKey =
+type EtherscanV2Ok<T> = { status: '1'; message: 'OK'; result: T };
+type EtherscanV2NotOk = { status: '0'; message: string; result: string };
+type EtherscanV2Response<T> = EtherscanV2Ok<T> | EtherscanV2NotOk;
+
+function etherscanV2ApiKey(): string {
+  return (
+    process.env.ETHERSCAN_API_KEY ??
     process.env.CELOSCAN_API_KEY ??
     process.env.NEXT_PUBLIC_CELOSCAN_API_KEY ??
-    '';
-  const base = 'https://api.celoscan.io/api';
+    ''
+  );
+}
 
-  const [txsRes, transfersRes] = await Promise.all([
-    fetch(
-      `${base}?module=account&action=txlist&address=${address}&sort=desc&offset=10000&page=1&apikey=${apiKey}`,
-    ),
-    fetch(
-      `${base}?module=account&action=tokentx&address=${address}&sort=desc&offset=10000&page=1&apikey=${apiKey}`,
-    ),
+async function etherscanV2Get<T>(params: Record<string, string>): Promise<T> {
+  const url = new URL('https://api.etherscan.io/v2/api');
+  url.searchParams.set('chainid', String(CELO_MAINNET_ID));
+  url.searchParams.set('apikey', etherscanV2ApiKey());
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`Etherscan V2 HTTP error: ${res.status}`);
+
+  const json = (await res.json()) as EtherscanV2Response<T>;
+  if (json.status !== '1') {
+    throw new Error(`Etherscan V2 NOTOK: ${json.message} (${json.result})`);
+  }
+  return json.result;
+}
+
+function parseUnixSecondsToIso(input?: string): string | null {
+  if (!input) return null;
+  const n = Number(input);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return new Date(n * 1000).toISOString();
+}
+
+async function fetchEtherscanV2Stats(address: string): Promise<WalletStats> {
+  // Efficient walletAge/lastActive: query first tx (asc) and latest tx (desc)
+  const [latest, earliest, transfers] = await Promise.all([
+    etherscanV2Get<Array<{ timeStamp?: string }>>({
+      module: 'account',
+      action: 'txlist',
+      address,
+      sort: 'desc',
+      page: '1',
+      offset: '1',
+    }),
+    etherscanV2Get<Array<{ timeStamp?: string }>>({
+      module: 'account',
+      action: 'txlist',
+      address,
+      sort: 'asc',
+      page: '1',
+      offset: '1',
+    }),
+    etherscanV2Get<Array<{ contractAddress?: string; value?: string }>>({
+      module: 'account',
+      action: 'tokentx',
+      address,
+      sort: 'desc',
+      page: '1',
+      offset: '10000',
+    }).catch(() => []),
   ]);
 
-  if (!txsRes.ok) throw new Error(`Celoscan txs error: ${txsRes.status}`);
+  const lastActive = parseUnixSecondsToIso(latest?.[0]?.timeStamp);
+  const walletAge = parseUnixSecondsToIso(earliest?.[0]?.timeStamp);
 
-  const txData = await txsRes.json();
-  const transferData = transfersRes.ok
-    ? await transfersRes.json()
-    : { result: [] };
+  // txCount: Etherscan doesn't provide a cheap count for normal txs; use a conservative minimum.
+  // We keep txCount >= 0 and rely on fallbacks (Blockscout) when needed.
+  const txCount = Math.max(latest.length, earliest.length);
 
-  const txs = Array.isArray(txData.result) ? txData.result : [];
-  const transfers = Array.isArray(transferData.result)
-    ? transferData.result
-    : [];
-
-  const txCount = txs.length;
-  const lastActive = txs[0]?.timeStamp
-    ? new Date(Number(txs[0].timeStamp) * 1000).toISOString()
-    : null;
-  const walletAge = txs[txs.length - 1]?.timeStamp
-    ? new Date(Number(txs[txs.length - 1].timeStamp) * 1000).toISOString()
-    : null;
-
-  // Filter token transfers by known stablecoin contract addresses and sum with correct decimals
-  const stablecoins = SUPPORTED_TOKENS[
-    CELO_MAINNET_ID as SupportedChainId
-  ].filter((t) => t.isStablecoin);
+  const stablecoins = getStablecoins(CELO_MAINNET_ID);
   const stablecoinAddressSet = new Set(
     stablecoins.map((t) => t.address.toLowerCase()),
   );
-  const stablecoinVolume = transfers
-    .filter((t: { contractAddress?: string }) =>
+  const stablecoinVolume = (transfers ?? [])
+    .filter((t) =>
       stablecoinAddressSet.has((t.contractAddress ?? '').toLowerCase()),
     )
-    .reduce((acc: number, t: { value?: string; contractAddress?: string }) => {
+    .reduce((acc: number, t) => {
       const addr = (t.contractAddress ?? '').toLowerCase();
       const token = stablecoins.find((s) => s.address.toLowerCase() === addr);
       return acc + Number(t.value ?? '0') / 10 ** (token?.decimals ?? 18);
@@ -127,6 +172,15 @@ async function fetchCeloscanStats(address: string): Promise<WalletStats> {
     .toFixed(2);
 
   return { txCount, stablecoinVolume, lastActive, walletAge };
+}
+
+async function fetchMainnetStats(address: string): Promise<WalletStats> {
+  try {
+    return await fetchEtherscanV2Stats(address);
+  } catch (err) {
+    console.warn('[scout] Etherscan V2 failed, trying Blockscout:', err);
+    return await fetchBlockscoutStats(address, CELO_MAINNET_ID);
+  }
 }
 
 // ── Builder detection — wallet has deployed at least one contract ─────────────
@@ -137,19 +191,19 @@ async function detectIsBuilder(
 ): Promise<boolean> {
   try {
     if (chainId === CELO_MAINNET_ID) {
-      const apiKey =
-        process.env.CELOSCAN_API_KEY ??
-        process.env.NEXT_PUBLIC_CELOSCAN_API_KEY ??
-        '';
-      const url = `https://api.celoscan.io/api?chainid=42220&module=account&action=txlist&address=${address}&sort=asc&page=1&offset=20&apikey=${apiKey}`;
-      const res = await fetch(url);
-      const json = res.ok ? await res.json() : { result: [] };
-      const txs = Array.isArray(json.result) ? json.result : [];
-      return txs.some((tx: { to?: string }) => tx.to === '' || tx.to === null);
+      const txs = await etherscanV2Get<Array<{ to?: string | null }>>({
+        module: 'account',
+        action: 'txlist',
+        address,
+        sort: 'asc',
+        page: '1',
+        offset: '50',
+      }).catch(() => []);
+      return txs.some((tx) => tx.to === '' || tx.to === null);
     } else {
-      const base = 'https://celo-sepolia.blockscout.com/api/v2';
+      const base = blockscoutBaseUrl(chainId);
       const res = await fetch(
-        `${base}/addresses/${address}/transactions?filter=to%7Cfrom&page_size=20`,
+        `${base}/addresses/${address}/transactions?filter=to%7Cfrom`,
       );
       const json = res.ok ? await res.json() : { items: [] };
       const txs = Array.isArray(json.items) ? json.items : [];
@@ -326,8 +380,8 @@ export async function GET(request: Request) {
 
     const [stats, isBuilder, auraStats] = await Promise.all([
       chainId === CELO_MAINNET_ID
-        ? fetchCeloscanStats(address)
-        : fetchBlockscoutStats(address),
+        ? fetchMainnetStats(address)
+        : fetchBlockscoutStats(address, chainId),
       detectIsBuilder(address, chainId),
       fetchAuraStats(address).catch(() => null),
     ]);

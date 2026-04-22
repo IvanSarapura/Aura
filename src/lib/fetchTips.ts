@@ -120,7 +120,9 @@ async function fetchBlockscoutTips(
   for (let page = 1; page <= 50 && nextUrl; page++) {
     const res = await fetch(nextUrl, { next: { revalidate: 30 } });
     // 404/422 = contract not indexed yet or unknown address — not an error
-    if (res.status === 404 || res.status === 422) return [];
+    if (res.status === 404 || res.status === 422) {
+      return allDecoded;
+    }
     if (!res.ok) throw new Error(`Blockscout HTTP error: ${res.status}`);
 
     const json = (await res.json()) as unknown;
@@ -149,14 +151,8 @@ async function fetchBlockscoutTips(
       }
       nextUrl = u.toString();
     } else {
-      // If we got a full page but no cursor, try a traditional `page` param.
-      if (logs.length > 0) {
-        const u = new URL(firstUrl.toString());
-        u.searchParams.set('page', String(page + 1));
-        nextUrl = u.toString();
-      } else {
-        nextUrl = null;
-      }
+      // No cursor provided → stop pagination (some Blockscout deployments don't support page params on logs).
+      nextUrl = null;
     }
   }
 
