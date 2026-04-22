@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Address } from 'viem';
+import { useChainId } from 'wagmi';
 import { useTips, type TipEvent } from '@/hooks/useTips';
 import { formatTxHashDisplay } from '@/lib/formatTxHash';
+import { getExplorerUrl } from '@/config/chains';
 import {
   applyTipFilters,
   deriveCategories,
@@ -38,6 +40,7 @@ function formatDate(iso: string): string {
 }
 
 function TipItem({ tip, type }: { tip: TipEvent; type: 'received' | 'sent' }) {
+  const chainId = useChainId();
   const peer = type === 'received' ? tip.from : tip.to;
   const peerLabel = type === 'received' ? 'from' : 'to';
   const hasMessage = tip.message.trim() !== '';
@@ -56,13 +59,29 @@ function TipItem({ tip, type }: { tip: TipEvent; type: 'received' | 'sent' }) {
         <span className={styles.from} title={peer}>
           {peerLabel} {formatTxHashDisplay(peer)}
         </span>
-        <span className={styles.category}>{tip.category}</span>
+        <a
+          className={styles.txInline}
+          href={getExplorerUrl(chainId, tip.txHash)}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`View transaction ${tip.txHash} on explorer`}
+          title={tip.txHash}
+        >
+          tx {formatTxHashDisplay(tip.txHash)}
+        </a>
       </div>
 
-      {hasMessage && (
-        <p className={styles.message} title={tip.message}>
-          &ldquo;{tip.message}&rdquo;
-        </p>
+      {hasMessage ? (
+        <div className={styles.messageRow}>
+          <p className={styles.message} title={tip.message}>
+            &ldquo;{tip.message}&rdquo;
+          </p>
+          <span className={styles.category}>{tip.category}</span>
+        </div>
+      ) : (
+        <div className={styles.txOnlyRow}>
+          <span className={styles.category}>{tip.category}</span>
+        </div>
       )}
     </li>
   );
