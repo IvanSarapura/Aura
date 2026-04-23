@@ -7,10 +7,12 @@ import { PaymentLink } from '@/components/PaymentLink/PaymentLink';
 import { TipFeed } from '@/components/TipFeed/TipFeed';
 import { SelfProfileBanner } from '@/components/SelfProfileBanner/SelfProfileBanner';
 import { ReceiverProfileSkeleton } from './ReceiverProfileSkeleton';
-import { useAccount } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
 import type { Address } from 'viem';
 import { formatTxHashDisplay } from '@/lib/formatTxHash';
 import styles from './ReceiverProfile.module.css';
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Props {
   address: Address;
@@ -23,6 +25,13 @@ interface ContentProps extends Props {
 function ProfileContent({ address, isOwnProfile }: ContentProps) {
   const { data, isPending, isError } = useScout(address);
   const { isConnected } = useAccount();
+  const chainId = useChainId();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!isConnected) return;
+    queryClient.invalidateQueries({ queryKey: ['scout', address] });
+  }, [isConnected, chainId, address, queryClient]);
 
   if (isPending) {
     return <ReceiverProfileSkeleton />;
