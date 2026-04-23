@@ -29,15 +29,20 @@ export interface ScoutResult {
 export function useScout(address: Address) {
   return useQuery<ScoutResult, Error>({
     queryKey: ['scout', address],
-    queryFn: async () => {
-      const res = await fetch(`/api/scout?address=${address}`);
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/scout?address=${address}`, { signal });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error((body as { error?: string }).error ?? 'Scout failed');
       }
       return res.json();
     },
-    staleTime: 5 * 60 * 1000, // 5 min cache
-    retry: 1,
+    // This data is user-facing and changes over time (new txs, activity).
+    // Keep it fresh without being overly chatty.
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
 }

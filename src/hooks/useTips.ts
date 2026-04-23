@@ -19,10 +19,11 @@ export function useTips(
 ) {
   return useInfiniteQuery<TipsPage, Error>({
     queryKey: ['tips', address, type],
-    queryFn: async ({ pageParam }) => {
+    queryFn: async ({ pageParam, signal }) => {
       const page = pageParam as number;
       const res = await fetch(
         `/api/tips?address=${address}&type=${type}&page=${page}`,
+        { signal },
       );
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -35,8 +36,9 @@ export function useTips(
     initialPageParam: 1,
     getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
     staleTime: 30 * 1000,
-    refetchInterval: 30 * 1000,
-    refetchIntervalInBackground: false,
-    retry: 1,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
 }

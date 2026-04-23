@@ -36,11 +36,14 @@ async function fetchBlockscoutStats(
 
   // Fetch wallet txs, addr summary, and each stablecoin transfer history in parallel
   const results = await Promise.all([
-    fetch(`${base}/addresses/${address}/transactions`),
-    fetch(`${base}/addresses/${address}`),
+    fetch(`${base}/addresses/${address}/transactions`, {
+      next: { revalidate: 30 },
+    }),
+    fetch(`${base}/addresses/${address}`, { next: { revalidate: 30 } }),
     ...stablecoins.map((t) =>
       fetch(
         `${base}/addresses/${address}/token-transfers?token=${t.address}&filter=from`,
+        { next: { revalidate: 60 } },
       ),
     ),
   ]);
@@ -97,16 +100,25 @@ function etherscanV2ApiKey(): string {
   );
 }
 
+async function fetchJsonWithRevalidate(
+  url: string,
+  revalidateSeconds: number,
+): Promise<unknown> {
+  const res = await fetch(url, { next: { revalidate: revalidateSeconds } });
+  if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+  return res.json();
+}
+
 async function etherscanV2Get<T>(params: Record<string, string>): Promise<T> {
   const url = new URL('https://api.etherscan.io/v2/api');
   url.searchParams.set('chainid', String(CELO_MAINNET_ID));
   url.searchParams.set('apikey', etherscanV2ApiKey());
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`Etherscan V2 HTTP error: ${res.status}`);
-
-  const json = (await res.json()) as EtherscanV2Response<T>;
+  const json = (await fetchJsonWithRevalidate(
+    url.toString(),
+    30,
+  )) as EtherscanV2Response<T>;
   if (json.status !== '1') {
     throw new Error(`Etherscan V2 NOTOK: ${json.message} (${json.result})`);
   }
@@ -152,9 +164,22 @@ async function fetchEtherscanV2Stats(address: string): Promise<WalletStats> {
   const lastActive = parseUnixSecondsToIso(latest?.[0]?.timeStamp);
   const walletAge = parseUnixSecondsToIso(earliest?.[0]?.timeStamp);
 
-  // txCount: Etherscan doesn't provide a cheap count for normal txs; use a conservative minimum.
-  // We keep txCount >= 0 and rely on fallbacks (Blockscout) when needed.
-  const txCount = Math.max(latest.length, earliest.length);
+  // txCount: Etherscan V2 doesn't provide a cheap "total tx count" for txlist.
+  // Use Blockscout's address summary for an accurate count when available.
+  let txCount = Math.max(latest.length, earliest.length);
+  try {
+    const base = blockscoutBaseUrl(CELO_MAINNET_ID);
+    const res = await fetch(`${base}/addresses/${address}`, {
+      next: { revalidate: 30 },
+    });
+    if (res.ok) {
+      const json = (await res.json()) as unknown;
+      const n = Number((json as { tx_count?: unknown })?.tx_count);
+      if (Number.isFinite(n) && n >= 0) txCount = n;
+    }
+  } catch {
+    // ignore: keep conservative txCount
+  }
 
   const stablecoins = getStablecoins(CELO_MAINNET_ID);
   const stablecoinAddressSet = new Set(

@@ -13,6 +13,7 @@ import { formatTxHashDisplay } from '@/lib/formatTxHash';
 import styles from './ReceiverProfile.module.css';
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useGracefulQueryState } from '@/hooks/useGracefulQueryState';
 
 interface Props {
   address: Address;
@@ -23,30 +24,64 @@ interface ContentProps extends Props {
 }
 
 function ProfileContent({ address, isOwnProfile }: ContentProps) {
-  const { data, isPending, isError } = useScout(address);
+  const { data, isPending, isError, isFetching, refetch } = useScout(address);
   const { isConnected } = useAccount();
   const chainId = useChainId();
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!isConnected) return;
-    queryClient.invalidateQueries({ queryKey: ['scout', address] });
+    const t = window.setTimeout(() => {
+      queryClient.invalidateQueries({ queryKey: ['scout', address] });
+    }, 800);
+    return () => window.clearTimeout(t);
   }, [isConnected, chainId, address, queryClient]);
 
-  if (isPending) {
+  const { showSkeleton, showError } = useGracefulQueryState({
+    isPending,
+    isError,
+    minPendingMs: 2000,
+    errorGraceMs: 2500,
+  });
+
+  if (showSkeleton) {
     return <ReceiverProfileSkeleton />;
   }
 
-  if (isError || !data) {
+  if (showError || !data) {
     return (
       <div className={styles.errorMsg}>
         Could not load wallet data. Try again later.
+        <div className={styles.refreshRow} style={{ justifyContent: 'center' }}>
+          <button
+            type="button"
+            className={styles.refreshBtn}
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            aria-busy={isFetching}
+            aria-label="Retry wallet stats"
+          >
+            {isFetching ? 'Updating…' : 'Retry'}
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className={styles.content}>
+      <div className={styles.refreshRow}>
+        <button
+          type="button"
+          className={styles.refreshBtn}
+          onClick={() => void refetch()}
+          disabled={isFetching}
+          aria-busy={isFetching}
+          aria-label="Refresh wallet stats"
+        >
+          {isFetching ? 'Updating…' : 'Refresh'}
+        </button>
+      </div>
       <ImpactCard result={data} address={address} />
 
       <PaymentLink address={address} />

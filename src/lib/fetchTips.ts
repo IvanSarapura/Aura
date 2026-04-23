@@ -167,6 +167,29 @@ export async function fetchTips(
   if (AURA_TIP_ADDRESS === '0x0000000000000000000000000000000000000000')
     return [];
 
+  // Prefer RPC getLogs unless we know the configured provider will reject wide ranges.
+  // Alchemy free tier limits eth_getLogs to a ~10 block range, which makes scanning impractical.
+  // In that case, skip RPC and go straight to indexed explorers.
+  const hasAlchemyKey = !!process.env.ALCHEMY_API_KEY;
+  const shouldSkipRpc = IS_MAINNET && hasAlchemyKey; // Alchemy mainnet endpoint is used when key exists
+
+  if (shouldSkipRpc) {
+    try {
+      return await fetchBlockscoutTips(address, type);
+    } catch (blockscoutErr) {
+      console.error('[fetchTips] Blockscout failed:', blockscoutErr);
+      try {
+        return await fetchCeloscanTips(addressToTopic(address), type);
+      } catch (celoscanErr) {
+        console.error(
+          '[fetchTips] Celoscan fallback also failed:',
+          celoscanErr,
+        );
+        return [];
+      }
+    }
+  }
+
   // RPC getLogs (primary) → Blockscout (fallback) → Celoscan (fallback, mainnet only) → empty array
   try {
     return await fetchTipsOnchain(

@@ -199,7 +199,15 @@ export function useAuraTip({
     } catch (err) {
       handleError(err);
     }
-  }, [phase, ready, needsApproval, approveSim, tipSim, writeContractAsync]);
+  }, [
+    phase,
+    ready,
+    needsApproval,
+    approveSim,
+    tipSim,
+    writeContractAsync,
+    feeCurrency,
+  ]);
 
   function handleError(err: unknown) {
     // viem wraps MetaMask errors — rejection code may live on err.cause or err.name
