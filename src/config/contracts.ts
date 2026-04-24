@@ -1,4 +1,4 @@
-import { celo, celoSepolia } from 'viem/chains';
+import { celo, celoSepolia, base, baseSepolia } from 'viem/chains';
 import type { Address } from 'viem';
 
 export const CONTRACTS = {
@@ -8,6 +8,14 @@ export const CONTRACTS = {
   },
   [celoSepolia.id]: {
     auraTip: (process.env.NEXT_PUBLIC_AURA_TIP_ADDRESS_TESTNET ??
+      '0x0000000000000000000000000000000000000000') as Address,
+  },
+  [base.id]: {
+    auraTip: (process.env.NEXT_PUBLIC_AURA_TIP_ADDRESS_BASE_MAINNET ??
+      '0x0000000000000000000000000000000000000000') as Address,
+  },
+  [baseSepolia.id]: {
+    auraTip: (process.env.NEXT_PUBLIC_AURA_TIP_ADDRESS_BASE_SEPOLIA ??
       '0x0000000000000000000000000000000000000000') as Address,
   },
 } as const;
@@ -37,7 +45,42 @@ export interface TokenInfo {
 
 export const SUPPORTED_TOKENS: Record<SupportedChainId, readonly TokenInfo[]> =
   {
-    // ── Mainnet token registry ───────────────────────────────────────────────
+    // ── Base Mainnet token registry ──────────────────────────────────────────
+    [base.id]: [
+      {
+        address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        symbol: 'USDC',
+        name: 'USD Coin',
+        decimals: 6,
+        isStablecoin: true,
+      },
+      {
+        address: '0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA',
+        symbol: 'USDbC',
+        name: 'USD Base Coin',
+        decimals: 6,
+        isStablecoin: true,
+      },
+      {
+        address: '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb',
+        symbol: 'DAI',
+        name: 'Dai Stablecoin',
+        decimals: 18,
+        isStablecoin: true,
+      },
+    ],
+    // ── Base Sepolia token registry ──────────────────────────────────────────
+    [baseSepolia.id]: [
+      {
+        address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+        symbol: 'USDC',
+        name: 'USD Coin (testnet)',
+        decimals: 6,
+        tipEnabled: true,
+        isStablecoin: true,
+      },
+    ],
+    // ── Celo Mainnet token registry ──────────────────────────────────────────
     [celo.id]: [
       // USD-pegged
       {

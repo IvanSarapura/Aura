@@ -6,6 +6,8 @@ import { SUPPORTED_TOKENS, type SupportedChainId } from '@/config/contracts';
 
 const CELO_MAINNET_ID = 42220;
 const CELO_SEPOLIA_ID = 11142220;
+const BASE_MAINNET_ID = 8453;
+const BASE_SEPOLIA_ID = 84532;
 
 // ── On-chain data fetchers ────────────────────────────────────────────────────
 
@@ -17,9 +19,11 @@ interface WalletStats {
 }
 
 function blockscoutBaseUrl(chainId: number): string {
-  return chainId === CELO_MAINNET_ID
-    ? 'https://celo.blockscout.com/api/v2'
-    : 'https://celo-sepolia.blockscout.com/api/v2';
+  if (chainId === CELO_MAINNET_ID) return 'https://celo.blockscout.com/api/v2';
+  if (chainId === BASE_MAINNET_ID) return 'https://base.blockscout.com/api/v2';
+  if (chainId === BASE_SEPOLIA_ID)
+    return 'https://base-sepolia.blockscout.com/api/v2';
+  return 'https://celo-sepolia.blockscout.com/api/v2';
 }
 
 function getStablecoins(chainId: number) {
@@ -109,9 +113,12 @@ async function fetchJsonWithRevalidate(
   return res.json();
 }
 
-async function etherscanV2Get<T>(params: Record<string, string>): Promise<T> {
+async function etherscanV2Get<T>(
+  params: Record<string, string>,
+  chainId: number = CELO_MAINNET_ID,
+): Promise<T> {
   const url = new URL('https://api.etherscan.io/v2/api');
-  url.searchParams.set('chainid', String(CELO_MAINNET_ID));
+  url.searchParams.set('chainid', String(chainId));
   url.searchParams.set('apikey', etherscanV2ApiKey());
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
@@ -132,33 +139,45 @@ function parseUnixSecondsToIso(input?: string): string | null {
   return new Date(n * 1000).toISOString();
 }
 
-async function fetchEtherscanV2Stats(address: string): Promise<WalletStats> {
+async function fetchEtherscanV2Stats(
+  address: string,
+  chainId: number = CELO_MAINNET_ID,
+): Promise<WalletStats> {
   // Efficient walletAge/lastActive: query first tx (asc) and latest tx (desc)
   const [latest, earliest, transfers] = await Promise.all([
-    etherscanV2Get<Array<{ timeStamp?: string }>>({
-      module: 'account',
-      action: 'txlist',
-      address,
-      sort: 'desc',
-      page: '1',
-      offset: '1',
-    }),
-    etherscanV2Get<Array<{ timeStamp?: string }>>({
-      module: 'account',
-      action: 'txlist',
-      address,
-      sort: 'asc',
-      page: '1',
-      offset: '1',
-    }),
-    etherscanV2Get<Array<{ contractAddress?: string; value?: string }>>({
-      module: 'account',
-      action: 'tokentx',
-      address,
-      sort: 'desc',
-      page: '1',
-      offset: '10000',
-    }).catch(() => []),
+    etherscanV2Get<Array<{ timeStamp?: string }>>(
+      {
+        module: 'account',
+        action: 'txlist',
+        address,
+        sort: 'desc',
+        page: '1',
+        offset: '1',
+      },
+      chainId,
+    ),
+    etherscanV2Get<Array<{ timeStamp?: string }>>(
+      {
+        module: 'account',
+        action: 'txlist',
+        address,
+        sort: 'asc',
+        page: '1',
+        offset: '1',
+      },
+      chainId,
+    ),
+    etherscanV2Get<Array<{ contractAddress?: string; value?: string }>>(
+      {
+        module: 'account',
+        action: 'tokentx',
+        address,
+        sort: 'desc',
+        page: '1',
+        offset: '10000',
+      },
+      chainId,
+    ).catch(() => []),
   ]);
 
   const lastActive = parseUnixSecondsToIso(latest?.[0]?.timeStamp);
@@ -168,8 +187,8 @@ async function fetchEtherscanV2Stats(address: string): Promise<WalletStats> {
   // Use Blockscout's address summary for an accurate count when available.
   let txCount = Math.max(latest.length, earliest.length);
   try {
-    const base = blockscoutBaseUrl(CELO_MAINNET_ID);
-    const res = await fetch(`${base}/addresses/${address}`, {
+    const bUrl = blockscoutBaseUrl(chainId);
+    const res = await fetch(`${bUrl}/addresses/${address}`, {
       next: { revalidate: 30 },
     });
     if (res.ok) {
@@ -181,7 +200,7 @@ async function fetchEtherscanV2Stats(address: string): Promise<WalletStats> {
     // ignore: keep conservative txCount
   }
 
-  const stablecoins = getStablecoins(CELO_MAINNET_ID);
+  const stablecoins = getStablecoins(chainId);
   const stablecoinAddressSet = new Set(
     stablecoins.map((t) => t.address.toLowerCase()),
   );
@@ -199,12 +218,15 @@ async function fetchEtherscanV2Stats(address: string): Promise<WalletStats> {
   return { txCount, stablecoinVolume, lastActive, walletAge };
 }
 
-async function fetchMainnetStats(address: string): Promise<WalletStats> {
+async function fetchMainnetStats(
+  address: string,
+  chainId: number = CELO_MAINNET_ID,
+): Promise<WalletStats> {
   try {
-    return await fetchEtherscanV2Stats(address);
+    return await fetchEtherscanV2Stats(address, chainId);
   } catch (err) {
     console.warn('[scout] Etherscan V2 failed, trying Blockscout:', err);
-    return await fetchBlockscoutStats(address, CELO_MAINNET_ID);
+    return await fetchBlockscoutStats(address, chainId);
   }
 }
 
@@ -241,10 +263,13 @@ async function detectIsBuilder(
 
 // ── Aura-native activity stats ────────────────────────────────────────────────
 
-async function fetchAuraStats(address: string): Promise<AuraStats> {
+async function fetchAuraStats(
+  address: string,
+  chainId?: SupportedChainId,
+): Promise<AuraStats> {
   const [received, sent] = await Promise.all([
-    fetchTips(address, 'received'),
-    fetchTips(address, 'sent'),
+    fetchTips(address, 'received', chainId),
+    fetchTips(address, 'sent', chainId),
   ]);
 
   const uniqueTippers = new Set(received.map((t) => t.from.toLowerCase())).size;
@@ -397,18 +422,23 @@ export async function GET(request: Request) {
   }
 
   try {
-    const chainId = Number(
+    const defaultChainId =
       process.env.NEXT_PUBLIC_CHAIN_PROFILE === 'mainnet'
         ? CELO_MAINNET_ID
-        : CELO_SEPOLIA_ID,
-    );
+        : CELO_SEPOLIA_ID;
+    const chainIdParam = searchParams.get('chainId');
+    const chainId = chainIdParam ? Number(chainIdParam) : defaultChainId;
+
+    const isMainnetChain =
+      chainId === CELO_MAINNET_ID || chainId === BASE_MAINNET_ID;
+    const auraChainId = (chainId as SupportedChainId) ?? undefined;
 
     const [stats, isBuilder, auraStats] = await Promise.all([
-      chainId === CELO_MAINNET_ID
-        ? fetchMainnetStats(address)
+      isMainnetChain
+        ? fetchMainnetStats(address, chainId)
         : fetchBlockscoutStats(address, chainId),
       detectIsBuilder(address, chainId),
-      fetchAuraStats(address).catch(() => null),
+      fetchAuraStats(address, auraChainId).catch(() => null),
     ]);
 
     const apiKey = process.env.ANTHROPIC_API_KEY;

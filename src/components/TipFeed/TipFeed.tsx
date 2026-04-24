@@ -105,6 +105,7 @@ export function TipFeed({
   headerTrailing,
   tipsFullPage = false,
 }: Props) {
+  const chainId = useChainId();
   const {
     data,
     isPending,
@@ -113,7 +114,7 @@ export function TipFeed({
     fetchNextPage,
     isFetchingNextPage,
     refetch,
-  } = useTips(address, type);
+  } = useTips(address, type, chainId);
 
   const [filters, setFilters] = useState<TipFilters>(EMPTY_FILTERS);
 

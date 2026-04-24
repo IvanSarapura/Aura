@@ -7,19 +7,19 @@ async function main() {
   const [deployer] = await ethers.getSigners();
   console.log(`\nDeploying on chain ${id} from ${deployer.address}`);
 
-  // On testnet, deploy MockUSDm so the test flow (mint → approve → tip) works.
-  // On mainnet, real tokens (USDm, USDC, USDT) are already live — no mock needed.
+  // On Celo testnet, deploy MockUSDm so the test flow (mint → approve → tip) works.
+  // On mainnets and Base Sepolia, real tokens (USDC, etc.) are already live — no mock needed.
   let mockUsdmAddress: string | undefined;
   if (id === 11142220) {
-    console.log('Testnet: deploying MockUSDm...');
+    console.log('Celo Sepolia: deploying MockUSDm...');
     const MockUSDm = await ethers.getContractFactory('MockUSDm');
     const mockUsdm = await MockUSDm.deploy();
     await mockUsdm.waitForDeployment();
     mockUsdmAddress = await mockUsdm.getAddress();
     console.log(`MockUSDm deployed: ${mockUsdmAddress}`);
-  } else if (id !== 42220) {
+  } else if (id !== 42220 && id !== 8453 && id !== 84532) {
     throw new Error(
-      `Unsupported chain ${id}. Use --network celo or celoSepolia`,
+      `Unsupported chain ${id}. Use --network celo, celoSepolia, base, or baseSepolia`,
     );
   }
 
@@ -34,6 +34,10 @@ async function main() {
   console.log('\n── Copy this into .env.local ──────────────────────');
   if (id === 42220) {
     console.log(`NEXT_PUBLIC_AURA_TIP_ADDRESS_MAINNET=${address}`);
+  } else if (id === 8453) {
+    console.log(`NEXT_PUBLIC_AURA_TIP_ADDRESS_BASE_MAINNET=${address}`);
+  } else if (id === 84532) {
+    console.log(`NEXT_PUBLIC_AURA_TIP_ADDRESS_BASE_SEPOLIA=${address}`);
   } else {
     console.log(`NEXT_PUBLIC_AURA_TIP_ADDRESS_TESTNET=${address}`);
     console.log(`NEXT_PUBLIC_USDM_ADDRESS_TESTNET=${mockUsdmAddress}`);

@@ -12,7 +12,7 @@ export default function Home() {
   const router = useRouter();
   const { address } = useAccount();
   const profile = process.env.NEXT_PUBLIC_CHAIN_PROFILE ?? 'testnet';
-  const network = profile === 'mainnet' ? 'Celo Mainnet' : 'Celo Sepolia';
+  const network = profile === 'mainnet' ? 'Mainnet' : 'Testnet';
 
   const handleAddress = useCallback(
     (address: Address) => router.push(`/${address}`),

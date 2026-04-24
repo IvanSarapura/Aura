@@ -16,15 +16,19 @@ interface TipsPage {
 export function useTips(
   address: Address,
   type: 'received' | 'sent' = 'received',
+  chainId?: number,
 ) {
   return useInfiniteQuery<TipsPage, Error>({
-    queryKey: ['tips', address, type],
+    queryKey: ['tips', address, type, chainId],
     queryFn: async ({ pageParam, signal }) => {
       const page = pageParam as number;
-      const res = await fetch(
-        `/api/tips?address=${address}&type=${type}&page=${page}`,
-        { signal },
-      );
+      const params = new URLSearchParams({
+        address,
+        type,
+        page: String(page),
+        ...(chainId !== undefined && { chainId: String(chainId) }),
+      });
+      const res = await fetch(`/api/tips?${params}`, { signal });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(

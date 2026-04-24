@@ -36,8 +36,21 @@ const config: HardhatUserConfig = {
       chainId: 11142220,
       accounts,
     },
+    base: {
+      url: `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
+      chainId: 8453,
+      accounts,
+    },
+    baseSepolia: {
+      url: `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}`,
+      chainId: 84532,
+      accounts,
+    },
   },
   etherscan: {
+    // Must be a string (not an object) to force Etherscan API V2.
+    // One key from etherscan.io covers all EVM chains (Celo 42220, Base 8453, etc.)
+    // via the unified v2 endpoint: api.etherscan.io/v2/api?chainid=...
     apiKey: ETHERSCAN_V2_API_KEY,
     customChains: [
       {
@@ -54,6 +67,22 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: 'https://celo-sepolia.blockscout.com/api',
           browserURL: 'https://celo-sepolia.blockscout.com',
+        },
+      },
+      {
+        network: 'base',
+        chainId: 8453,
+        urls: {
+          apiURL: 'https://api.basescan.org/api',
+          browserURL: 'https://basescan.org',
+        },
+      },
+      {
+        network: 'baseSepolia',
+        chainId: 84532,
+        urls: {
+          apiURL: 'https://api-sepolia.basescan.org/api',
+          browserURL: 'https://sepolia.basescan.org',
         },
       },
     ],

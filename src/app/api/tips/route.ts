@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { isAddress } from 'viem';
 import { fetchTips } from '@/lib/fetchTips';
+import { isSupportedChain } from '@/config/contracts';
+import type { SupportedChainId } from '@/config/contracts';
 
 const PAGE_SIZE = 3;
 
@@ -9,13 +11,18 @@ export async function GET(request: Request) {
   const address = searchParams.get('address') ?? '';
   const type = (searchParams.get('type') ?? 'received') as 'received' | 'sent';
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
+  const chainIdParam = searchParams.get('chainId');
+  const chainId: SupportedChainId | undefined =
+    chainIdParam !== null && isSupportedChain(Number(chainIdParam))
+      ? (Number(chainIdParam) as SupportedChainId)
+      : undefined;
 
   if (!isAddress(address)) {
     return NextResponse.json({ error: 'Invalid address' }, { status: 400 });
   }
 
   try {
-    const all = await fetchTips(address, type);
+    const all = await fetchTips(address, type, chainId);
 
     all.sort(
       (a, b) =>

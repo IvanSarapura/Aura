@@ -8,18 +8,33 @@ import {
 } from '@/lib/tipEvents';
 import type { SupportedChainId } from '@/config/contracts';
 import { CONTRACTS } from '@/config/contracts';
-import { celo, celoSepolia } from 'viem/chains';
+import { celo, celoSepolia, base, baseSepolia } from 'viem/chains';
 import { fetchTipsOnchain } from '@/lib/getOnchainLogs';
+import { env } from '@/config/env';
 
-const CHAIN_PROFILE = process.env.NEXT_PUBLIC_CHAIN_PROFILE ?? 'testnet';
-const IS_MAINNET = CHAIN_PROFILE === 'mainnet';
-const CHAIN_ID: SupportedChainId = IS_MAINNET ? celo.id : celoSepolia.id;
-const AURA_TIP_ADDRESS = CONTRACTS[CHAIN_ID].auraTip;
+const IS_MAINNET = process.env.NEXT_PUBLIC_CHAIN_PROFILE === 'mainnet';
+
+// Etherscan V2 unified API covers all EVM chains (Celo, Base, etc.) via ?chainid=.
+// One key from etherscan.io is sufficient for all chains.
+const ETHERSCAN_API_KEY =
+  process.env.ETHERSCAN_API_KEY ??
+  process.env.CELOSCAN_API_KEY ??
+  env.celoscanApiKey;
 
 function blockscoutBaseUrl(chainId: SupportedChainId): string {
-  return chainId === celo.id
-    ? 'https://celo.blockscout.com/api/v2'
-    : 'https://celo-sepolia.blockscout.com/api/v2';
+  if (chainId === celo.id) return 'https://celo.blockscout.com/api/v2';
+  if (chainId === base.id) return 'https://base.blockscout.com/api/v2';
+  if (chainId === baseSepolia.id)
+    return 'https://base-sepolia.blockscout.com/api/v2';
+  return 'https://celo-sepolia.blockscout.com/api/v2';
+}
+
+function defaultChainId(): SupportedChainId {
+  return IS_MAINNET ? celo.id : celoSepolia.id;
+}
+
+function isMainnetChain(chainId: SupportedChainId): boolean {
+  return chainId === celo.id || chainId === base.id;
 }
 
 interface RawCeloscanLog {
@@ -48,28 +63,22 @@ async function readCeloscanJson(res: Response): Promise<CeloscanLogsResponse> {
   return json as CeloscanLogsResponse;
 }
 
-async function fetchCeloscanTips(
+async function fetchEtherscanTips(
+  chainId: SupportedChainId,
+  contractAddress: Address,
   walletTopic: string,
   type: 'received' | 'sent',
 ): Promise<TipEvent[]> {
-  // Celoscan migrated to Etherscan API V2. Prefer server-side key; fall back to public key if set.
-  const apiKey =
-    process.env.ETHERSCAN_API_KEY ??
-    process.env.CELOSCAN_API_KEY ??
-    process.env.NEXT_PUBLIC_CELOSCAN_API_KEY ??
-    process.env.NEXT_PUBLIC_CELOSCAN_API_KEY ??
-    '';
-
+  const apiKey = ETHERSCAN_API_KEY;
   const topicIndex = type === 'received' ? 'topic2' : 'topic1';
   const operator =
     type === 'received' ? 'topic0_2_opr=and' : 'topic0_1_opr=and';
 
-  // Etherscan API V2 (multichain) endpoint
   const url = new URL('https://api.etherscan.io/v2/api');
-  url.searchParams.set('chainid', '42220');
+  url.searchParams.set('chainid', String(chainId));
   url.searchParams.set('module', 'logs');
   url.searchParams.set('action', 'getLogs');
-  url.searchParams.set('address', AURA_TIP_ADDRESS);
+  url.searchParams.set('address', contractAddress);
   url.searchParams.set('topic0', TIP_SENT_TOPIC0);
   url.searchParams.set(topicIndex, walletTopic);
   url.searchParams.set(operator.split('=')[0], 'and');
@@ -85,34 +94,36 @@ async function fetchCeloscanTips(
     url.searchParams.set('apikey', apiKey);
 
     const res = await fetch(url.toString(), { next: { revalidate: 30 } });
-    if (!res.ok) throw new Error(`Celoscan HTTP error: ${res.status}`);
+    if (!res.ok) throw new Error(`Etherscan HTTP error: ${res.status}`);
 
     const json = await readCeloscanJson(res);
 
     if (json.status !== '1') {
-      throw new Error(`Celoscan NOTOK: ${json.message} (${json.result})`);
+      throw new Error(`Etherscan NOTOK: ${json.message} (${json.result})`);
     }
     if (!Array.isArray(json.result)) {
-      throw new Error('Celoscan OK response had non-array result');
+      throw new Error('Etherscan OK response had non-array result');
     }
 
     allLogs.push(...json.result);
     if (json.result.length < pageSize) break;
   }
 
-  return decodeCeloscanLogs(allLogs, CHAIN_ID);
+  return decodeCeloscanLogs(allLogs, chainId);
 }
 
 async function fetchBlockscoutTips(
+  chainId: SupportedChainId,
+  contractAddress: Address,
   walletAddress: string,
   type: 'received' | 'sent',
 ): Promise<TipEvent[]> {
-  const base = blockscoutBaseUrl(CHAIN_ID);
+  const baseUrl = blockscoutBaseUrl(chainId);
 
   const wallet = walletAddress.toLowerCase();
   const allDecoded: TipEvent[] = [];
 
-  const firstUrl = new URL(`${base}/addresses/${AURA_TIP_ADDRESS}/logs`);
+  const firstUrl = new URL(`${baseUrl}/addresses/${contractAddress}/logs`);
   firstUrl.searchParams.set('topic', TIP_SENT_TOPIC0);
 
   let nextUrl: string | null = firstUrl.toString();
@@ -128,7 +139,7 @@ async function fetchBlockscoutTips(
     const json = (await res.json()) as unknown;
     const items = (json as { items?: unknown })?.items;
     const logs = Array.isArray(items) ? (items as RawBlockscoutLog[]) : [];
-    const decoded = decodeBlockscoutLogs(logs, CHAIN_ID);
+    const decoded = decodeBlockscoutLogs(logs, chainId);
 
     const pageFiltered = decoded.filter((t) =>
       type === 'received'
@@ -141,7 +152,7 @@ async function fetchBlockscoutTips(
     const nextPageParams = (json as { next_page_params?: unknown })
       ?.next_page_params;
     if (nextPageParams && typeof nextPageParams === 'object') {
-      const u = new URL(`${base}/addresses/${AURA_TIP_ADDRESS}/logs`);
+      const u = new URL(`${baseUrl}/addresses/${contractAddress}/logs`);
       u.searchParams.set('topic', TIP_SENT_TOPIC0);
       for (const [k, v] of Object.entries(
         nextPageParams as Record<string, unknown>,
@@ -162,41 +173,56 @@ async function fetchBlockscoutTips(
 export async function fetchTips(
   address: string,
   type: 'received' | 'sent',
+  chainId?: SupportedChainId,
 ): Promise<TipEvent[]> {
   if (!isAddress(address)) return [];
-  if (AURA_TIP_ADDRESS === '0x0000000000000000000000000000000000000000')
+
+  const resolvedChainId = chainId ?? defaultChainId();
+  const contractAddress = CONTRACTS[resolvedChainId].auraTip;
+
+  if (contractAddress === '0x0000000000000000000000000000000000000000')
     return [];
 
   // Prefer RPC getLogs unless we know the configured provider will reject wide ranges.
   // Alchemy free tier limits eth_getLogs to a ~10 block range, which makes scanning impractical.
   // In that case, skip RPC and go straight to indexed explorers.
   const hasAlchemyKey = !!process.env.ALCHEMY_API_KEY;
-  const shouldSkipRpc = IS_MAINNET && hasAlchemyKey; // Alchemy mainnet endpoint is used when key exists
+  const shouldSkipRpc = isMainnetChain(resolvedChainId) && hasAlchemyKey;
 
   if (shouldSkipRpc) {
     try {
-      return await fetchBlockscoutTips(address, type);
+      return await fetchBlockscoutTips(
+        resolvedChainId,
+        contractAddress,
+        address,
+        type,
+      );
     } catch (blockscoutErr) {
       console.error('[fetchTips] Blockscout failed:', blockscoutErr);
       try {
-        return await fetchCeloscanTips(addressToTopic(address), type);
-      } catch (celoscanErr) {
+        return await fetchEtherscanTips(
+          resolvedChainId,
+          contractAddress,
+          addressToTopic(address),
+          type,
+        );
+      } catch (etherscanErr) {
         console.error(
-          '[fetchTips] Celoscan fallback also failed:',
-          celoscanErr,
+          '[fetchTips] Etherscan fallback also failed:',
+          etherscanErr,
         );
         return [];
       }
     }
   }
 
-  // RPC getLogs (primary) → Blockscout (fallback) → Celoscan (fallback, mainnet only) → empty array
+  // RPC getLogs (primary) → Blockscout (fallback) → Etherscan V2 (fallback, mainnet only) → empty array
   try {
     return await fetchTipsOnchain(
       address as Address,
       type,
-      AURA_TIP_ADDRESS as Address,
-      CHAIN_ID,
+      contractAddress,
+      resolvedChainId,
     );
   } catch (primaryErr) {
     console.warn(
@@ -204,19 +230,29 @@ export async function fetchTips(
       primaryErr,
     );
     try {
-      return await fetchBlockscoutTips(address, type);
+      return await fetchBlockscoutTips(
+        resolvedChainId,
+        contractAddress,
+        address,
+        type,
+      );
     } catch (fallbackErr) {
       console.error(
         '[fetchTips] Blockscout fallback also failed:',
         fallbackErr,
       );
-      if (IS_MAINNET) {
+      if (isMainnetChain(resolvedChainId)) {
         try {
-          return await fetchCeloscanTips(addressToTopic(address), type);
-        } catch (celoscanErr) {
+          return await fetchEtherscanTips(
+            resolvedChainId,
+            contractAddress,
+            addressToTopic(address),
+            type,
+          );
+        } catch (etherscanErr) {
           console.error(
-            '[fetchTips] Celoscan fallback also failed:',
-            celoscanErr,
+            '[fetchTips] Etherscan fallback also failed:',
+            etherscanErr,
           );
         }
       }
