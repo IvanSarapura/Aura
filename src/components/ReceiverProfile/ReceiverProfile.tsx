@@ -11,8 +11,6 @@ import { useAccount, useChainId } from 'wagmi';
 import type { Address } from 'viem';
 import { formatTxHashDisplay } from '@/lib/formatTxHash';
 import styles from './ReceiverProfile.module.css';
-import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useGracefulQueryState } from '@/hooks/useGracefulQueryState';
 
 interface Props {
@@ -24,24 +22,18 @@ interface ContentProps extends Props {
 }
 
 function ProfileContent({ address, isOwnProfile }: ContentProps) {
-  const { data, isPending, isError, isFetching, refetch } = useScout(address);
   const { isConnected } = useAccount();
   const chainId = useChainId();
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (!isConnected) return;
-    const t = window.setTimeout(() => {
-      queryClient.invalidateQueries({ queryKey: ['scout', address] });
-    }, 800);
-    return () => window.clearTimeout(t);
-  }, [isConnected, chainId, address, queryClient]);
+  const { data, isPending, isError, isFetching, refetch } = useScout(
+    address,
+    chainId,
+  );
 
   const { showSkeleton, showError } = useGracefulQueryState({
     isPending,
     isError,
-    minPendingMs: 2000,
-    errorGraceMs: 2500,
+    minPendingMs: 600,
+    errorGraceMs: 1000,
   });
 
   if (showSkeleton) {

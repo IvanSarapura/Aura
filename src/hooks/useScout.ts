@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import type { Address } from 'viem';
 
 export type TrustLevel = 'Low' | 'Medium' | 'High';
@@ -26,22 +26,23 @@ export interface ScoutResult {
   auraStats: AuraStats | null;
 }
 
-export function useScout(address: Address) {
+export function useScout(address: Address, chainId?: number) {
   return useQuery<ScoutResult, Error>({
-    queryKey: ['scout', address],
+    queryKey: ['scout', address, chainId],
     queryFn: async ({ signal }) => {
-      const res = await fetch(`/api/scout?address=${address}`, { signal });
+      const params = new URLSearchParams({ address });
+      if (chainId !== undefined) params.set('chainId', String(chainId));
+      const res = await fetch(`/api/scout?${params}`, { signal });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error((body as { error?: string }).error ?? 'Scout failed');
       }
       return res.json();
     },
-    // This data is user-facing and changes over time (new txs, activity).
-    // Keep it fresh without being overly chatty.
     staleTime: 30 * 1000,
+    placeholderData: keepPreviousData,
     refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
+    refetchOnMount: true,
     retry: 3,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });

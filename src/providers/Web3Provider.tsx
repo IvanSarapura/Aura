@@ -23,7 +23,17 @@ export function Web3Provider({
   appName,
   chainProfile,
 }: { children: React.ReactNode } & WagmiPublicEnv) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 30_000,
+            gcTime: 10 * 60_000,
+          },
+        },
+      }),
+  );
   const config = useMemo(
     () =>
       createWagmiConfig({
