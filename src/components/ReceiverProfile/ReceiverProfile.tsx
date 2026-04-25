@@ -1,6 +1,7 @@
 'use client';
 
 import { useScout } from '@/hooks/useScout';
+import { useScoutFast } from '@/hooks/useScoutFast';
 import { useRefreshProfile } from '@/hooks/useRefreshProfile';
 import { ImpactCard } from '@/components/ImpactCard/ImpactCard';
 import { TipForm } from '@/components/TipForm/TipForm';
@@ -53,14 +54,19 @@ function RefreshButton({ address }: { address: Address }) {
 function ProfileContent({ address, isOwnProfile }: ContentProps) {
   const { isConnected } = useAccount();
   const chainId = useChainId();
+  const { data: fastData, isPending: isFastPending } = useScoutFast(
+    address,
+    chainId,
+  );
   const { data, isPending, isError, isPlaceholderData } = useScout(
     address,
     chainId,
   );
 
-  // ImpactCard shows inline mini-skeletons while scout data loads or refreshes
-  // for a new chain. TipFeed always renders independently with its own skeleton.
-  const scoutLoading = isPending || isPlaceholderData;
+  // Fast data (txCount, walletAge, lastActive, isBuilder) arrives in ~1-2s.
+  // Full data (stablecoinVolume, trustLevel, headline, auraStats) arrives in ~5-12s.
+  const fastLoading = isFastPending && !fastData;
+  const fullLoading = (isPending || isPlaceholderData) && !data;
 
   return (
     <div className={styles.content}>
@@ -81,8 +87,10 @@ function ProfileContent({ address, isOwnProfile }: ContentProps) {
       ) : (
         <ImpactCard
           result={data ?? null}
+          fastResult={fastData ?? null}
           address={address}
-          isLoading={scoutLoading}
+          isLoading={fastLoading}
+          isLoadingFull={fullLoading}
         />
       )}
 

@@ -13,6 +13,13 @@ export interface AuraStats {
   totalVolumeReceived: string;
 }
 
+export interface ScoutFastResult {
+  txCount: number;
+  walletAge: string | null;
+  lastActive: string | null;
+  isBuilder: boolean;
+}
+
 export interface ScoutResult {
   trustLevel: TrustLevel;
   headline: string;

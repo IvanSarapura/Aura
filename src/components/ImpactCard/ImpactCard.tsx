@@ -1,13 +1,19 @@
 'use client';
 
-import type { ScoutResult, TrustLevel } from '@/hooks/useScout';
+import type {
+  ScoutResult,
+  ScoutFastResult,
+  TrustLevel,
+} from '@/hooks/useScout';
 import { formatTxHashDisplay } from '@/lib/formatTxHash';
 import styles from './ImpactCard.module.css';
 
 interface Props {
   result: ScoutResult | null;
+  fastResult?: ScoutFastResult | null;
   address: string;
   isLoading?: boolean;
+  isLoadingFull?: boolean;
 }
 
 function SkeletonValue({ wide }: { wide?: boolean }) {
@@ -48,8 +54,21 @@ function formatDate(iso: string | null): string {
   }
 }
 
-export function ImpactCard({ result, address, isLoading = false }: Props) {
-  const loading = isLoading || !result;
+export function ImpactCard({
+  result,
+  fastResult,
+  address,
+  isLoading = false,
+  isLoadingFull,
+}: Props) {
+  // Fast fields: use fastResult first, fall back to result.stats
+  const fastData =
+    fastResult ??
+    (result ? { ...result.stats, isBuilder: result.isBuilder } : null);
+  const loadingFast = isLoading && !fastData;
+  // Full fields: slow data (stablecoinVolume, trustLevel, headline, auraStats)
+  const loadingFull = isLoadingFull ?? (isLoading || !result);
+
   const trustLevel = result?.trustLevel;
   const hasAuraActivity =
     result?.auraStats && result.auraStats.tipsReceived > 0;
@@ -58,7 +77,7 @@ export function ImpactCard({ result, address, isLoading = false }: Props) {
     <article
       className={`${styles.card}${trustLevel ? ` ${styles[`trust${trustLevel}`]}` : ''}`}
       aria-label="Wallet impact card"
-      aria-busy={loading}
+      aria-busy={loadingFull}
     >
       {/* Header: badges */}
       <header className={styles.header}>
@@ -70,24 +89,23 @@ export function ImpactCard({ result, address, isLoading = false }: Props) {
             flexWrap: 'wrap',
           }}
         >
-          {loading ? (
+          {loadingFull ? (
             <span className={styles.skeletonBadge} aria-hidden="true" />
           ) : (
-            <>
-              <span
-                className={`${styles.badge} ${styles[`badge${trustLevel!}`]}`}
-              >
-                {TRUST_LABELS[trustLevel!]}
-              </span>
-              {result!.isBuilder && (
-                <span
-                  className={styles.builderBadge}
-                  aria-label="Contract deployer"
-                >
-                  ⬡ Builder
-                </span>
-              )}
-            </>
+            <span
+              className={`${styles.badge} ${styles[`badge${trustLevel!}`]}`}
+            >
+              {TRUST_LABELS[trustLevel!]}
+            </span>
+          )}
+          {/* Builder badge comes from fast data — shown as soon as fast result arrives */}
+          {!loadingFast && fastData!.isBuilder && (
+            <span
+              className={styles.builderBadge}
+              aria-label="Contract deployer"
+            >
+              ⬡ Builder
+            </span>
           )}
         </div>
         <p className={styles.address} title={address}>
@@ -99,14 +117,14 @@ export function ImpactCard({ result, address, isLoading = false }: Props) {
       <div className={styles.meterWrapper} aria-hidden="true">
         <div className={styles.meterTrack}>
           <div
-            className={`${styles.meterFill} ${loading ? styles.meterFillPending : METER_CLASS[trustLevel!]}`}
+            className={`${styles.meterFill} ${loadingFull ? styles.meterFillPending : METER_CLASS[trustLevel!]}`}
           />
         </div>
       </div>
 
       {/* Headline */}
       <p className={styles.headline}>
-        {loading ? <SkeletonValue wide /> : result!.headline}
+        {loadingFull ? <SkeletonValue wide /> : result!.headline}
       </p>
 
       {/* Unified stats grid */}
@@ -114,33 +132,37 @@ export function ImpactCard({ result, address, isLoading = false }: Props) {
         <div className={styles.stat}>
           <dt className={styles.statLabel}>Transactions</dt>
           <dd>
-            {loading ? (
+            {loadingFast ? (
               <SkeletonValue />
             ) : (
-              result!.stats.txCount.toLocaleString()
+              fastData!.txCount.toLocaleString()
             )}
           </dd>
         </div>
         <div className={styles.stat}>
           <dt className={styles.statLabel}>Wallet Age</dt>
           <dd>
-            {loading ? <SkeletonValue /> : formatDate(result!.stats.walletAge)}
+            {loadingFast ? <SkeletonValue /> : formatDate(fastData!.walletAge)}
           </dd>
         </div>
         <div className={styles.stat}>
           <dt className={styles.statLabel}>Last Active</dt>
           <dd>
-            {loading ? <SkeletonValue /> : formatDate(result!.stats.lastActive)}
+            {loadingFast ? <SkeletonValue /> : formatDate(fastData!.lastActive)}
           </dd>
         </div>
         <div className={styles.stat}>
           <dt className={styles.statLabel}>Vol. Sent</dt>
           <dd>
-            {loading ? <SkeletonValue /> : `$${result!.stats.stablecoinVolume}`}
+            {loadingFull ? (
+              <SkeletonValue />
+            ) : (
+              `$${result!.stats.stablecoinVolume}`
+            )}
           </dd>
         </div>
 
-        {!loading && result!.auraStats && (
+        {!loadingFull && result!.auraStats && (
           <>
             <div className={styles.statSeparator} aria-hidden="true" />
             <div className={styles.stat}>
