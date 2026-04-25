@@ -6,12 +6,10 @@ import { TipForm } from '@/components/TipForm/TipForm';
 import { PaymentLink } from '@/components/PaymentLink/PaymentLink';
 import { TipFeed } from '@/components/TipFeed/TipFeed';
 import { SelfProfileBanner } from '@/components/SelfProfileBanner/SelfProfileBanner';
-import { ReceiverProfileSkeleton } from './ReceiverProfileSkeleton';
 import { useAccount, useChainId } from 'wagmi';
 import type { Address } from 'viem';
 import { formatTxHashDisplay } from '@/lib/formatTxHash';
 import styles from './ReceiverProfile.module.css';
-import { useGracefulQueryState } from '@/hooks/useGracefulQueryState';
 
 interface Props {
   address: Address;
@@ -24,41 +22,12 @@ interface ContentProps extends Props {
 function ProfileContent({ address, isOwnProfile }: ContentProps) {
   const { isConnected } = useAccount();
   const chainId = useChainId();
-  const { data, isPending, isError, isFetching, refetch } = useScout(
-    address,
-    chainId,
-  );
+  const { data, isPending, isError, isFetching, isPlaceholderData, refetch } =
+    useScout(address, chainId);
 
-  const { showSkeleton, showError } = useGracefulQueryState({
-    isPending,
-    isError,
-    minPendingMs: 600,
-    errorGraceMs: 1000,
-  });
-
-  if (showSkeleton) {
-    return <ReceiverProfileSkeleton />;
-  }
-
-  if (showError || !data) {
-    return (
-      <div className={styles.errorMsg}>
-        Could not load wallet data. Try again later.
-        <div className={styles.refreshRow} style={{ justifyContent: 'center' }}>
-          <button
-            type="button"
-            className={styles.refreshBtn}
-            onClick={() => void refetch()}
-            disabled={isFetching}
-            aria-busy={isFetching}
-            aria-label="Retry wallet stats"
-          >
-            {isFetching ? 'Updating…' : 'Retry'}
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // ImpactCard shows inline mini-skeletons while scout data loads or refreshes
+  // for a new chain. TipFeed always renders independently with its own skeleton.
+  const scoutLoading = isPending || isPlaceholderData;
 
   return (
     <div className={styles.content}>
@@ -74,7 +43,32 @@ function ProfileContent({ address, isOwnProfile }: ContentProps) {
           {isFetching ? 'Updating…' : 'Refresh'}
         </button>
       </div>
-      <ImpactCard result={data} address={address} />
+
+      {isError && !data ? (
+        <div className={styles.errorMsg}>
+          Could not load wallet data. Try again later.
+          <div
+            className={styles.refreshRow}
+            style={{ justifyContent: 'center' }}
+          >
+            <button
+              type="button"
+              className={styles.refreshBtn}
+              onClick={() => void refetch()}
+              disabled={isFetching}
+              aria-label="Retry wallet stats"
+            >
+              {isFetching ? 'Updating…' : 'Retry'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <ImpactCard
+          result={data ?? null}
+          address={address}
+          isLoading={scoutLoading}
+        />
+      )}
 
       <PaymentLink address={address} />
 
@@ -99,7 +93,10 @@ function ProfileContent({ address, isOwnProfile }: ContentProps) {
         (isConnected ? (
           <section className={styles.tipSection}>
             <h2 className={styles.tipHeading}>Send a tip</h2>
-            <TipForm recipient={address} trustLevel={data.trustLevel} />
+            <TipForm
+              recipient={address}
+              trustLevel={data?.trustLevel ?? 'Low'}
+            />
           </section>
         ) : (
           <p className={styles.connectPrompt}>

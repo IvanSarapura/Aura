@@ -5,8 +5,22 @@ import { formatTxHashDisplay } from '@/lib/formatTxHash';
 import styles from './ImpactCard.module.css';
 
 interface Props {
-  result: ScoutResult;
+  result: ScoutResult | null;
   address: string;
+  isLoading?: boolean;
+}
+
+function SkeletonValue({ wide }: { wide?: boolean }) {
+  return (
+    <span
+      className={
+        wide
+          ? `${styles.skeletonValue} ${styles.skeletonValueWide}`
+          : styles.skeletonValue
+      }
+      aria-hidden="true"
+    />
+  );
 }
 
 const TRUST_LABELS: Record<TrustLevel, string> = {
@@ -34,14 +48,17 @@ function formatDate(iso: string | null): string {
   }
 }
 
-export function ImpactCard({ result, address }: Props) {
-  const { trustLevel, headline, isBuilder, stats, auraStats } = result;
-  const hasAuraActivity = auraStats && auraStats.tipsReceived > 0;
+export function ImpactCard({ result, address, isLoading = false }: Props) {
+  const loading = isLoading || !result;
+  const trustLevel = result?.trustLevel;
+  const hasAuraActivity =
+    result?.auraStats && result.auraStats.tipsReceived > 0;
 
   return (
     <article
-      className={`${styles.card} ${styles[`trust${trustLevel}`]}`}
+      className={`${styles.card}${trustLevel ? ` ${styles[`trust${trustLevel}`]}` : ''}`}
       aria-label="Wallet impact card"
+      aria-busy={loading}
     >
       {/* Header: badges */}
       <header className={styles.header}>
@@ -53,16 +70,24 @@ export function ImpactCard({ result, address }: Props) {
             flexWrap: 'wrap',
           }}
         >
-          <span className={`${styles.badge} ${styles[`badge${trustLevel}`]}`}>
-            {TRUST_LABELS[trustLevel]}
-          </span>
-          {isBuilder && (
-            <span
-              className={styles.builderBadge}
-              aria-label="Contract deployer"
-            >
-              ⬡ Builder
-            </span>
+          {loading ? (
+            <span className={styles.skeletonBadge} aria-hidden="true" />
+          ) : (
+            <>
+              <span
+                className={`${styles.badge} ${styles[`badge${trustLevel!}`]}`}
+              >
+                {TRUST_LABELS[trustLevel!]}
+              </span>
+              {result!.isBuilder && (
+                <span
+                  className={styles.builderBadge}
+                  aria-label="Contract deployer"
+                >
+                  ⬡ Builder
+                </span>
+              )}
+            </>
           )}
         </div>
         <p className={styles.address} title={address}>
@@ -73,33 +98,49 @@ export function ImpactCard({ result, address }: Props) {
       {/* Trust meter */}
       <div className={styles.meterWrapper} aria-hidden="true">
         <div className={styles.meterTrack}>
-          <div className={`${styles.meterFill} ${METER_CLASS[trustLevel]}`} />
+          <div
+            className={`${styles.meterFill} ${loading ? styles.meterFillPending : METER_CLASS[trustLevel!]}`}
+          />
         </div>
       </div>
 
       {/* Headline */}
-      <p className={styles.headline}>{headline}</p>
+      <p className={styles.headline}>
+        {loading ? <SkeletonValue wide /> : result!.headline}
+      </p>
 
       {/* Unified stats grid */}
       <dl className={styles.stats}>
         <div className={styles.stat}>
           <dt className={styles.statLabel}>Transactions</dt>
-          <dd>{stats.txCount.toLocaleString()}</dd>
+          <dd>
+            {loading ? (
+              <SkeletonValue />
+            ) : (
+              result!.stats.txCount.toLocaleString()
+            )}
+          </dd>
         </div>
         <div className={styles.stat}>
           <dt className={styles.statLabel}>Wallet Age</dt>
-          <dd>{formatDate(stats.walletAge)}</dd>
+          <dd>
+            {loading ? <SkeletonValue /> : formatDate(result!.stats.walletAge)}
+          </dd>
         </div>
         <div className={styles.stat}>
           <dt className={styles.statLabel}>Last Active</dt>
-          <dd>{formatDate(stats.lastActive)}</dd>
+          <dd>
+            {loading ? <SkeletonValue /> : formatDate(result!.stats.lastActive)}
+          </dd>
         </div>
         <div className={styles.stat}>
           <dt className={styles.statLabel}>Vol. Sent</dt>
-          <dd>${stats.stablecoinVolume}</dd>
+          <dd>
+            {loading ? <SkeletonValue /> : `$${result!.stats.stablecoinVolume}`}
+          </dd>
         </div>
 
-        {auraStats && (
+        {!loading && result!.auraStats && (
           <>
             <div className={styles.statSeparator} aria-hidden="true" />
             <div className={styles.stat}>
@@ -109,26 +150,26 @@ export function ImpactCard({ result, address }: Props) {
               <dd
                 className={hasAuraActivity ? styles.auraHighlight : undefined}
               >
-                {auraStats.tipsReceived}
+                {result!.auraStats.tipsReceived}
               </dd>
             </div>
             <div className={styles.stat}>
               <dt className={`${styles.statLabel} ${styles.auraLabel}`}>
                 Tips Sent
               </dt>
-              <dd>{auraStats.tipsSent}</dd>
+              <dd>{result!.auraStats.tipsSent}</dd>
             </div>
             <div className={styles.stat}>
               <dt className={`${styles.statLabel} ${styles.auraLabel}`}>
                 Unique Tippers
               </dt>
-              <dd>{auraStats.uniqueTippers}</dd>
+              <dd>{result!.auraStats.uniqueTippers}</dd>
             </div>
             <div className={styles.stat}>
               <dt className={`${styles.statLabel} ${styles.auraLabel}`}>
                 Vol. Received
               </dt>
-              <dd>${auraStats.totalVolumeReceived}</dd>
+              <dd>${result!.auraStats.totalVolumeReceived}</dd>
             </div>
           </>
         )}
