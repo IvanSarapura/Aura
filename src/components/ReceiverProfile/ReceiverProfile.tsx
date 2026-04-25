@@ -1,6 +1,7 @@
 'use client';
 
 import { useScout } from '@/hooks/useScout';
+import { useRefreshProfile } from '@/hooks/useRefreshProfile';
 import { ImpactCard } from '@/components/ImpactCard/ImpactCard';
 import { TipForm } from '@/components/TipForm/TipForm';
 import { PaymentLink } from '@/components/PaymentLink/PaymentLink';
@@ -19,11 +20,43 @@ interface ContentProps extends Props {
   isOwnProfile: boolean;
 }
 
+function RefreshButton({ address }: { address: Address }) {
+  const { refresh, isRefreshing, inCooldown, secondsLeft, justUpdated } =
+    useRefreshProfile(address);
+
+  let label: string;
+  if (isRefreshing) label = 'Updating…';
+  else if (justUpdated) label = 'Updated';
+  else if (inCooldown) label = `Retry in ${secondsLeft}s`;
+  else label = 'Refresh';
+
+  return (
+    <button
+      type="button"
+      className={`${styles.refreshBtn}${justUpdated ? ` ${styles.refreshBtnSuccess}` : ''}`}
+      onClick={refresh}
+      disabled={isRefreshing || inCooldown}
+      aria-busy={isRefreshing}
+      aria-label="Refresh wallet data"
+    >
+      <span
+        className={`${styles.refreshIcon}${isRefreshing ? ` ${styles.refreshIconSpinning}` : ''}`}
+        aria-hidden="true"
+      >
+        ↻
+      </span>
+      {label}
+    </button>
+  );
+}
+
 function ProfileContent({ address, isOwnProfile }: ContentProps) {
   const { isConnected } = useAccount();
   const chainId = useChainId();
-  const { data, isPending, isError, isFetching, isPlaceholderData, refetch } =
-    useScout(address, chainId);
+  const { data, isPending, isError, isPlaceholderData } = useScout(
+    address,
+    chainId,
+  );
 
   // ImpactCard shows inline mini-skeletons while scout data loads or refreshes
   // for a new chain. TipFeed always renders independently with its own skeleton.
@@ -32,16 +65,7 @@ function ProfileContent({ address, isOwnProfile }: ContentProps) {
   return (
     <div className={styles.content}>
       <div className={styles.refreshRow}>
-        <button
-          type="button"
-          className={styles.refreshBtn}
-          onClick={() => void refetch()}
-          disabled={isFetching}
-          aria-busy={isFetching}
-          aria-label="Refresh wallet stats"
-        >
-          {isFetching ? 'Updating…' : 'Refresh'}
-        </button>
+        <RefreshButton address={address} />
       </div>
 
       {isError && !data ? (
@@ -51,15 +75,7 @@ function ProfileContent({ address, isOwnProfile }: ContentProps) {
             className={styles.refreshRow}
             style={{ justifyContent: 'center' }}
           >
-            <button
-              type="button"
-              className={styles.refreshBtn}
-              onClick={() => void refetch()}
-              disabled={isFetching}
-              aria-label="Retry wallet stats"
-            >
-              {isFetching ? 'Updating…' : 'Retry'}
-            </button>
+            <RefreshButton address={address} />
           </div>
         </div>
       ) : (

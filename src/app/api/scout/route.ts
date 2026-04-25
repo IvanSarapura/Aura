@@ -70,7 +70,13 @@ async function fetchBlockscoutStats(
 
   const [txData, addrData] = await Promise.all([txsRes.json(), addrRes.json()]);
 
-  const txCount = addrData.tx_count ?? txData.items?.length ?? 0;
+  // Blockscout v2 uses `transaction_count`; `tx_count` kept as fallback for
+  // older deployments. Page-item count is a last resort (understates totals).
+  const txCount =
+    (addrData.transaction_count as number | undefined) ??
+    (addrData.tx_count as number | undefined) ??
+    (txData.items?.length as number | undefined) ??
+    0;
   const items: { timestamp?: string }[] = txData.items ?? [];
   const lastActive = items[0]?.timestamp ?? null;
   const walletAge = items[items.length - 1]?.timestamp ?? null;
