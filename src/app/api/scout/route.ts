@@ -9,6 +9,19 @@ const CELO_SEPOLIA_ID = 11142220;
 const BASE_MAINNET_ID = 8453;
 const BASE_SEPOLIA_ID = 84532;
 
+// ── Timeout utility ──────────────────────────────────────────────────────────
+// Wraps any promise with a hard deadline. External APIs (Etherscan, Blockscout,
+// Anthropic) can hang indefinitely — this prevents the route from blocking past
+// the deadline and lets callers fall back to null/defaults.
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms),
+    ),
+  ]);
+}
+
 // ── On-chain data fetchers ────────────────────────────────────────────────────
 
 interface WalletStats {
@@ -173,6 +186,8 @@ async function fetchEtherscanV2Stats(
       },
       chainId,
     ),
+    // 200 recent transfers are enough for a meaningful volume estimate.
+    // 10 000 caused 60-90s Etherscan response times on cold start.
     etherscanV2Get<Array<{ contractAddress?: string; value?: string }>>(
       {
         module: 'account',
@@ -180,7 +195,7 @@ async function fetchEtherscanV2Stats(
         address,
         sort: 'desc',
         page: '1',
-        offset: '10000',
+        offset: '200',
       },
       chainId,
     ).catch(() => []),
@@ -195,11 +210,14 @@ async function fetchEtherscanV2Stats(
   try {
     const bUrl = blockscoutBaseUrl(chainId);
     const res = await fetch(`${bUrl}/addresses/${address}`, {
+      signal: AbortSignal.timeout(3_000),
       next: { revalidate: 30 },
     });
     if (res.ok) {
       const json = (await res.json()) as unknown;
-      const n = Number((json as { tx_count?: unknown })?.tx_count);
+      const j = json as { transaction_count?: unknown; tx_count?: unknown };
+      // Blockscout v2 uses `transaction_count`; `tx_count` kept for older deployments.
+      const n = Number(j.transaction_count ?? j.tx_count);
       if (Number.isFinite(n) && n >= 0) txCount = n;
     }
   } catch {
@@ -439,17 +457,27 @@ export async function GET(request: Request) {
       chainId === CELO_MAINNET_ID || chainId === BASE_MAINNET_ID;
     const auraChainId = (chainId as SupportedChainId) ?? undefined;
 
+    // Hard timeouts prevent external API hangs from blocking the route
+    // indefinitely. Callers fall back to safe defaults on timeout.
     const [stats, isBuilder, auraStats] = await Promise.all([
-      isMainnetChain
-        ? fetchMainnetStats(address, chainId)
-        : fetchBlockscoutStats(address, chainId),
-      detectIsBuilder(address, chainId),
-      fetchAuraStats(address, auraChainId).catch(() => null),
+      withTimeout(
+        isMainnetChain
+          ? fetchMainnetStats(address, chainId)
+          : fetchBlockscoutStats(address, chainId),
+        12_000,
+      ),
+      withTimeout(detectIsBuilder(address, chainId), 5_000).catch(() => false),
+      withTimeout(fetchAuraStats(address, auraChainId), 8_000).catch(
+        () => null,
+      ),
     ]);
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     const result = apiKey
-      ? await analyzeWithClaude(address, stats, isBuilder, auraStats)
+      ? await withTimeout(
+          analyzeWithClaude(address, stats, isBuilder, auraStats),
+          10_000,
+        ).catch(() => buildFallbackResult(stats, isBuilder, auraStats))
       : buildFallbackResult(stats, isBuilder, auraStats);
 
     return NextResponse.json(result);
