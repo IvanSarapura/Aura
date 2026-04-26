@@ -14,7 +14,8 @@ export interface AuraStats {
 }
 
 export interface ScoutFastResult {
-  txCount: number;
+  // null = API didn't return a reliable count yet (keep skeleton); 0 = confirmed new wallet
+  txCount: number | null;
   walletAge: string | null;
   lastActive: string | null;
   isBuilder: boolean;
@@ -26,7 +27,8 @@ export interface ScoutResult {
   isBuilder: boolean;
   stats: {
     txCount: number;
-    stablecoinVolume: string;
+    // null = API failed to return transfer data; show '—' once loaded
+    stablecoinVolume: string | null;
     lastActive: string | null;
     walletAge: string | null;
   };

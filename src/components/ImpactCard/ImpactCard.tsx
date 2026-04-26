@@ -61,13 +61,24 @@ export function ImpactCard({
   isLoading = false,
   isLoadingFull,
 }: Props) {
-  // Fast fields: use fastResult first, fall back to result.stats
+  // txCount: prefer full result (authoritative); accept fast result only when > 0.
+  // null = "API didn't confirm a count yet" — keep skeleton.
+  // 0 from fast route = "confirmed new wallet via HTTP 422" — safe to show.
+  const txCountValue =
+    result?.stats.txCount ??
+    (fastResult?.txCount != null && fastResult.txCount > 0
+      ? fastResult.txCount
+      : null);
+  const loadingTxCount = txCountValue === null;
+
+  // loadingFull: skeleton for trust badge, headline, vol. sent, aura stats.
+  const loadingFull = isLoadingFull ?? (isLoading || !result);
+
+  // Fast fields (walletAge, lastActive, isBuilder): merge fast + full sources.
   const fastData =
     fastResult ??
     (result ? { ...result.stats, isBuilder: result.isBuilder } : null);
   const loadingFast = isLoading && !fastData;
-  // Full fields: slow data (stablecoinVolume, trustLevel, headline, auraStats)
-  const loadingFull = isLoadingFull ?? (isLoading || !result);
 
   const trustLevel = result?.trustLevel;
   const hasAuraActivity =
@@ -132,10 +143,10 @@ export function ImpactCard({
         <div className={styles.stat}>
           <dt className={styles.statLabel}>Transactions</dt>
           <dd>
-            {loadingFast ? (
+            {loadingTxCount ? (
               <SkeletonValue />
             ) : (
-              fastData!.txCount.toLocaleString()
+              txCountValue!.toLocaleString()
             )}
           </dd>
         </div>
@@ -156,6 +167,8 @@ export function ImpactCard({
           <dd>
             {loadingFull ? (
               <SkeletonValue />
+            ) : result!.stats.stablecoinVolume === null ? (
+              '—'
             ) : (
               `$${result!.stats.stablecoinVolume}`
             )}

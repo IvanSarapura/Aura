@@ -27,6 +27,19 @@ function parseUnixSecondsToIso(input?: string): string | null {
   return new Date(n * 1000).toISOString();
 }
 
+// txCount sentinel: null = API couldn't confirm a count, keep skeleton in UI.
+// Only return 0 when we have an explicit "no activity" signal (HTTP 422).
+function parseBlockscoutTxCount(json: {
+  transaction_count?: unknown;
+  tx_count?: unknown;
+}): number | null {
+  const n = Number(json.transaction_count ?? json.tx_count);
+  // Return the count only when it's a positive integer. 0 from this endpoint
+  // can mean "not yet indexed" rather than "genuinely empty wallet", so we treat
+  // it as null and let the full scout result confirm it.
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 async function fetchFastStatsMainnet(
   address: string,
   chainId: number,
@@ -42,7 +55,6 @@ async function fetchFastStatsMainnet(
     return url.toString();
   };
 
-  // Run all three requests in parallel with a shared 3.5s deadline
   const signal = AbortSignal.timeout(3_500);
 
   const [latestRes, earliestRes, addrRes] = await Promise.allSettled([
@@ -74,22 +86,19 @@ async function fetchFastStatsMainnet(
     }),
   ]);
 
-  let txCount = 0;
+  let txCount: number | null = null;
   let walletAge: string | null = null;
   let lastActive: string | null = null;
   let isBuilder = false;
 
-  // txCount from Blockscout address endpoint
   if (addrRes.status === 'fulfilled' && addrRes.value.ok) {
     const json = (await addrRes.value.json()) as {
       transaction_count?: unknown;
       tx_count?: unknown;
     };
-    const n = Number(json.transaction_count ?? json.tx_count);
-    if (Number.isFinite(n) && n >= 0) txCount = n;
+    txCount = parseBlockscoutTxCount(json);
   }
 
-  // walletAge/lastActive/isBuilder from Etherscan txlist
   if (latestRes.status === 'fulfilled' && latestRes.value.ok) {
     type EthTx = { timeStamp?: string; to?: string | null };
     const json = (await latestRes.value.json()) as {
@@ -110,6 +119,29 @@ async function fetchFastStatsMainnet(
     };
     if (json.status === '1' && Array.isArray(json.result)) {
       walletAge = parseUnixSecondsToIso(json.result[0]?.timeStamp);
+    }
+  }
+
+  // Fallback: when Etherscan doesn't return timestamps (missing API key, rate limit,
+  // or no activity), query Blockscout for at least a best-effort date estimate.
+  if (!lastActive || !walletAge) {
+    try {
+      const fbUrl = `${blockscoutBaseUrl(chainId)}/addresses/${address}/transactions`;
+      const fbRes = await fetch(fbUrl, {
+        signal: AbortSignal.timeout(2_000),
+        next: { revalidate: 30 },
+      });
+      if (fbRes.ok) {
+        const fbData = (await fbRes.json()) as {
+          items?: Array<{ timestamp?: string }>;
+        };
+        const fbItems = fbData.items ?? [];
+        if (!lastActive) lastActive = fbItems[0]?.timestamp ?? null;
+        if (!walletAge)
+          walletAge = fbItems[fbItems.length - 1]?.timestamp ?? null;
+      }
+    } catch {
+      // ignore — keep existing null values
     }
   }
 
@@ -134,27 +166,28 @@ async function fetchFastStatsBlockscout(
     }),
   ]);
 
-  let txCount = 0;
+  let txCount: number | null = null;
   let walletAge: string | null = null;
   let lastActive: string | null = null;
   let isBuilder = false;
 
   if (addrRes.status === 'fulfilled') {
     const res = addrRes.value;
-    if (res.status === 422)
+    // 422 = Blockscout explicitly signals "no activity on this address"
+    if (res.status === 422) {
       return {
         txCount: 0,
         walletAge: null,
         lastActive: null,
         isBuilder: false,
       };
+    }
     if (res.ok) {
       const json = (await res.json()) as {
         transaction_count?: unknown;
         tx_count?: unknown;
       };
-      const n = Number(json.transaction_count ?? json.tx_count);
-      if (Number.isFinite(n) && n >= 0) txCount = n;
+      txCount = parseBlockscoutTxCount(json);
     }
   }
 

@@ -26,7 +26,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 interface WalletStats {
   txCount: number;
-  stablecoinVolume: string; // sum of all isStablecoin tokens sent, normalized to USD units
+  // null = transfer API failed; UI shows '—' rather than misleading '$0.00'
+  stablecoinVolume: string | null;
   lastActive: string | null;
   walletAge: string | null;
 }
@@ -90,14 +91,44 @@ async function fetchBlockscoutStats(
     (addrData.tx_count as number | undefined) ??
     (txData.items?.length as number | undefined) ??
     0;
-  const items: { timestamp?: string }[] = txData.items ?? [];
+  type TxPage = {
+    items?: Array<{ timestamp?: string }>;
+    next_page_params?: Record<string, string> | null;
+  };
+  const txPage = txData as TxPage;
+  const items = txPage.items ?? [];
   const lastActive = items[0]?.timestamp ?? null;
-  const walletAge = items[items.length - 1]?.timestamp ?? null;
+  // Follow cursor once to reach older txs — covers wallets with up to ~100 transactions.
+  // Blockscout sorts descending and doesn't support sort direction; cursor is the only way.
+  let walletAge: string | null = items[items.length - 1]?.timestamp ?? null;
+  if (txPage.next_page_params) {
+    try {
+      const cursorUrl = new URL(`${base}/addresses/${address}/transactions`);
+      for (const [k, v] of Object.entries(txPage.next_page_params))
+        cursorUrl.searchParams.set(k, v);
+      const cursorRes = await fetch(cursorUrl.toString(), {
+        next: { revalidate: 30 },
+      });
+      if (cursorRes.ok) {
+        const cursorPage = (await cursorRes.json()) as TxPage;
+        const cursorItems = cursorPage.items ?? [];
+        if (cursorItems.length > 0)
+          walletAge =
+            cursorItems[cursorItems.length - 1]?.timestamp ?? walletAge;
+      }
+    } catch {
+      // keep first-page estimate
+    }
+  }
 
-  // Sum transfer volumes across all stablecoins, normalizing each by its own decimals
+  // Sum transfer volumes across all stablecoins, normalizing each by its own decimals.
+  // If every transfer request failed, return null so the UI keeps a skeleton rather
+  // than showing a misleading '$0.00'.
   let total = 0;
+  let anyTransferSucceeded = stablecoins.length === 0; // no stablecoins → genuine $0
   for (const [i, res] of transferResponses.entries()) {
     if (!res.ok) continue;
+    anyTransferSucceeded = true;
     const data = await res.json();
     const decimals = stablecoins[i]?.decimals ?? 18;
     total += (data.items ?? []).reduce(
@@ -107,7 +138,12 @@ async function fetchBlockscoutStats(
     );
   }
 
-  return { txCount, stablecoinVolume: total.toFixed(2), lastActive, walletAge };
+  return {
+    txCount,
+    stablecoinVolume: anyTransferSucceeded ? total.toFixed(2) : null,
+    lastActive,
+    walletAge,
+  };
 }
 
 type EtherscanV2Ok<T> = { status: '1'; message: 'OK'; result: T };
@@ -162,8 +198,12 @@ async function fetchEtherscanV2Stats(
   address: string,
   chainId: number = CELO_MAINNET_ID,
 ): Promise<WalletStats> {
-  // Efficient walletAge/lastActive: query first tx (asc) and latest tx (desc)
-  const [latest, earliest, transfers] = await Promise.all([
+  // Efficient walletAge/lastActive: query first tx (asc) and latest tx (desc).
+  // tokentx is kept separate so a failure returns null (not []) — the UI then
+  // shows '—' instead of a misleading '$0.00'.
+  type TokenTx = { contractAddress?: string; value?: string };
+  let transfers: TokenTx[] | null = null;
+  const [latest, earliest] = await Promise.all([
     etherscanV2Get<Array<{ timeStamp?: string }>>(
       {
         module: 'account',
@@ -186,9 +226,12 @@ async function fetchEtherscanV2Stats(
       },
       chainId,
     ),
+  ]);
+
+  try {
     // 200 recent transfers are enough for a meaningful volume estimate.
     // 10 000 caused 60-90s Etherscan response times on cold start.
-    etherscanV2Get<Array<{ contractAddress?: string; value?: string }>>(
+    transfers = await etherscanV2Get<TokenTx[]>(
       {
         module: 'account',
         action: 'tokentx',
@@ -198,8 +241,10 @@ async function fetchEtherscanV2Stats(
         offset: '200',
       },
       chainId,
-    ).catch(() => []),
-  ]);
+    );
+  } catch {
+    transfers = null; // API unavailable — surface null so UI keeps skeleton
+  }
 
   const lastActive = parseUnixSecondsToIso(latest?.[0]?.timeStamp);
   const walletAge = parseUnixSecondsToIso(earliest?.[0]?.timeStamp);
@@ -225,19 +270,25 @@ async function fetchEtherscanV2Stats(
   }
 
   const stablecoins = getStablecoins(chainId);
-  const stablecoinAddressSet = new Set(
-    stablecoins.map((t) => t.address.toLowerCase()),
-  );
-  const stablecoinVolume = (transfers ?? [])
-    .filter((t) =>
-      stablecoinAddressSet.has((t.contractAddress ?? '').toLowerCase()),
-    )
-    .reduce((acc: number, t) => {
-      const addr = (t.contractAddress ?? '').toLowerCase();
-      const token = stablecoins.find((s) => s.address.toLowerCase() === addr);
-      return acc + Number(t.value ?? '0') / 10 ** (token?.decimals ?? 18);
-    }, 0)
-    .toFixed(2);
+  // transfers === null means the API failed; preserve null so the UI shows '—'
+  // rather than a misleading '$0.00'. transfers === [] means the API succeeded
+  // but returned no results, which IS a confirmed $0.
+  let stablecoinVolume: string | null = null;
+  if (transfers !== null) {
+    const stablecoinAddressSet = new Set(
+      stablecoins.map((t) => t.address.toLowerCase()),
+    );
+    stablecoinVolume = transfers
+      .filter((t) =>
+        stablecoinAddressSet.has((t.contractAddress ?? '').toLowerCase()),
+      )
+      .reduce((acc: number, t) => {
+        const addr = (t.contractAddress ?? '').toLowerCase();
+        const token = stablecoins.find((s) => s.address.toLowerCase() === addr);
+        return acc + Number(t.value ?? '0') / 10 ** (token?.decimals ?? 18);
+      }, 0)
+      .toFixed(2);
+  }
 
   return { txCount, stablecoinVolume, lastActive, walletAge };
 }
@@ -330,7 +381,9 @@ function deriveTrustLevel(
     ? Date.now() - new Date(stats.walletAge).getTime()
     : 0;
   const ageDays = ageMs / (1000 * 60 * 60 * 24);
-  const volume = parseFloat(stats.stablecoinVolume);
+  const volume = stats.stablecoinVolume
+    ? parseFloat(stats.stablecoinVolume)
+    : 0;
 
   const tipsReceived = auraStats?.tipsReceived ?? 0;
   const tipsSent = auraStats?.tipsSent ?? 0;
@@ -405,7 +458,7 @@ Analyze this wallet and return a JSON object with EXACTLY this shape:
 Wallet: ${address}
 On-chain stats:
 - Transactions: ${stats.txCount}
-- Stablecoin volume sent: $${stats.stablecoinVolume}
+- Stablecoin volume sent: ${stats.stablecoinVolume !== null ? `$${stats.stablecoinVolume}` : 'unknown'}
 - Last active: ${stats.lastActive ?? 'unknown'}
 - Wallet age: ${stats.walletAge ?? 'unknown'}
 - Is smart contract deployer: ${isBuilder}
